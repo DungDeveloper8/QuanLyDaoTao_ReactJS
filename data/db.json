@@ -1,0 +1,585 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "fullName": "Phòng Quản lý đào tạo",
+      "role": "admin",
+      "active": true,
+      "password": "admin123"
+    },
+    {
+      "id": 2,
+      "username": "gv001",
+      "fullName": "Nguyễn Minh Quân",
+      "role": "lecturer",
+      "lecturerId": 1,
+      "active": true,
+      "password": "gv123"
+    },
+    {
+      "id": 3,
+      "username": "sv001",
+      "fullName": "Nguyễn Văn An",
+      "role": "student",
+      "studentId": 1,
+      "active": true,
+      "password": "sv123"
+    }
+  ],
+  "faculties": [
+    {
+      "id": 1,
+      "code": "CNTT",
+      "name": "Khoa Công nghệ Thông tin",
+      "description": "Đào tạo lập trình, mạng máy tính và công nghệ phần mềm."
+    },
+    {
+      "id": 2,
+      "code": "KT",
+      "name": "Khoa Kinh tế",
+      "description": "Đào tạo kế toán và nghiệp vụ kinh tế."
+    },
+    {
+      "id": 3,
+      "code": "DDT",
+      "name": "Khoa Điện – Điện tử",
+      "description": "Đào tạo điện công nghiệp và kỹ thuật điện – điện tử."
+    }
+  ],
+  "majors": [
+    {
+      "id": 1,
+      "code": "LTM",
+      "name": "Lập trình máy tính",
+      "facultyId": 1,
+      "totalCredits": 90,
+      "description": "Phát triển ứng dụng web, cơ sở dữ liệu, API và kỹ năng lập trình hiện đại."
+    },
+    {
+      "id": 2,
+      "code": "QTM",
+      "name": "Quản trị mạng máy tính",
+      "facultyId": 1,
+      "totalCredits": 88,
+      "description": "Thiết kế, triển khai và quản trị hệ thống mạng doanh nghiệp."
+    },
+    {
+      "id": 3,
+      "code": "KTKT",
+      "name": "Kế toán doanh nghiệp",
+      "facultyId": 2,
+      "totalCredits": 86,
+      "description": "Nghiệp vụ kế toán, tài chính và ứng dụng phần mềm kế toán."
+    }
+  ],
+  "cohorts": [
+    {
+      "id": 1,
+      "code": "K16",
+      "name": "Khóa 16",
+      "startYear": 2025,
+      "endYear": 2028
+    },
+    {
+      "id": 2,
+      "code": "K17",
+      "name": "Khóa 17",
+      "startYear": 2026,
+      "endYear": 2029
+    }
+  ],
+  "classes": [
+    {
+      "id": 1,
+      "code": "CNTT-LTM-K16A",
+      "name": "Lập trình máy tính K16A",
+      "majorId": 1,
+      "cohortId": 1
+    },
+    {
+      "id": 2,
+      "code": "CNTT-QTM-K16A",
+      "name": "Quản trị mạng K16A",
+      "majorId": 2,
+      "cohortId": 1
+    },
+    {
+      "id": 3,
+      "code": "KT-KTKT-K16A",
+      "name": "Kế toán K16A",
+      "majorId": 3,
+      "cohortId": 1
+    }
+  ],
+  "semesters": [
+    {
+      "id": 1,
+      "code": "HK2-2526",
+      "name": "Học kỳ 2",
+      "academicYear": "2025–2026",
+      "startDate": "2026-01-15",
+      "endDate": "2026-06-15",
+      "registrationStart": "2026-01-02",
+      "registrationEnd": "2026-01-12",
+      "active": false
+    },
+    {
+      "id": 2,
+      "code": "HK1-2627",
+      "name": "Học kỳ 1",
+      "academicYear": "2026–2027",
+      "startDate": "2026-09-05",
+      "endDate": "2027-01-15",
+      "registrationStart": "2026-09-01",
+      "registrationEnd": "2027-01-10",
+      "active": true
+    },
+    {
+      "id": 3,
+      "code": "HK2-2627",
+      "name": "Học kỳ 2",
+      "academicYear": "2026–2027",
+      "startDate": "2027-01-25",
+      "endDate": "2027-06-15",
+      "registrationStart": "2027-01-10",
+      "registrationEnd": "2027-01-20",
+      "active": false
+    }
+  ],
+  "lecturers": [
+    {
+      "id": 1,
+      "code": "GV001",
+      "fullName": "Nguyễn Minh Quân",
+      "facultyId": 1,
+      "email": "quan.nm@bachkhoa.edu.vn",
+      "phone": "0901000001"
+    },
+    {
+      "id": 2,
+      "code": "GV002",
+      "fullName": "Trần Thu Hà",
+      "facultyId": 1,
+      "email": "ha.tt@bachkhoa.edu.vn",
+      "phone": "0901000002"
+    },
+    {
+      "id": 3,
+      "code": "GV003",
+      "fullName": "Lê Hoàng Nam",
+      "facultyId": 1,
+      "email": "nam.lh@bachkhoa.edu.vn",
+      "phone": "0901000003"
+    }
+  ],
+  "students": [
+    {
+      "id": 1,
+      "code": "SV001",
+      "fullName": "Nguyễn Văn An",
+      "gender": "male",
+      "birthDate": "2006-03-12",
+      "classId": 1,
+      "email": "sv001@sv.bachkhoa.edu.vn",
+      "phone": "0912000001",
+      "address": "Hà Nội",
+      "status": "studying"
+    },
+    {
+      "id": 2,
+      "code": "SV002",
+      "fullName": "Trần Thị Bình",
+      "gender": "female",
+      "birthDate": "2006-05-22",
+      "classId": 1,
+      "email": "sv002@sv.bachkhoa.edu.vn",
+      "phone": "0912000002",
+      "address": "Hà Nội",
+      "status": "studying"
+    },
+    {
+      "id": 3,
+      "code": "SV003",
+      "fullName": "Lê Minh Châu",
+      "gender": "male",
+      "birthDate": "2006-07-03",
+      "classId": 1,
+      "email": "sv003@sv.bachkhoa.edu.vn",
+      "phone": "0912000003",
+      "address": "Bắc Ninh",
+      "status": "studying"
+    }
+  ],
+  "subjects": [
+    {
+      "id": 2,
+      "code": "WEB101",
+      "name": "Thiết kế Web HTML & CSS",
+      "credits": 3,
+      "theoryHours": 30,
+      "practiceHours": 30,
+      "prerequisiteIds": [],
+      "attendanceWeight": 10,
+      "midtermWeight": 30,
+      "finalWeight": 60,
+      "maxAbsenceRate": 20
+    },
+    {
+      "id": 3,
+      "code": "JS101",
+      "name": "Lập trình JavaScript",
+      "credits": 3,
+      "theoryHours": 30,
+      "practiceHours": 30,
+      "prerequisiteIds": [
+        2
+      ],
+      "attendanceWeight": 10,
+      "midtermWeight": 30,
+      "finalWeight": 60,
+      "maxAbsenceRate": 20
+    },
+    {
+      "id": 4,
+      "code": "REACT201",
+      "name": "Lập trình Web với ReactJS",
+      "credits": 4,
+      "theoryHours": 30,
+      "practiceHours": 45,
+      "prerequisiteIds": [
+        3
+      ],
+      "attendanceWeight": 10,
+      "midtermWeight": 30,
+      "finalWeight": 60,
+      "maxAbsenceRate": 20
+    }
+  ],
+  "curricula": [
+    {
+      "id": 1,
+      "name": "Chương trình Lập trình máy tính",
+      "majorId": 1,
+      "version": "2026",
+      "active": true,
+      "subjectIds": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Chương trình Quản trị mạng",
+      "majorId": 2,
+      "version": "2026",
+      "active": true,
+      "subjectIds": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Chương trình Kế toán doanh nghiệp",
+      "majorId": 3,
+      "version": "2026",
+      "active": true,
+      "subjectIds": [
+        2
+      ]
+    }
+  ],
+  "courseSections": [
+    {
+      "id": 101,
+      "code": "WEB101-K16A-2526",
+      "subjectId": 2,
+      "classId": 1,
+      "lecturerId": 1,
+      "semesterId": 1,
+      "room": "A101",
+      "weekday": 2,
+      "shift": 1,
+      "periodsPerSession": 3,
+      "capacity": 40,
+      "status": "finished"
+    },
+    {
+      "id": 102,
+      "code": "JS101-K16A-2526",
+      "subjectId": 3,
+      "classId": 1,
+      "lecturerId": 1,
+      "semesterId": 1,
+      "room": "A102",
+      "weekday": 3,
+      "shift": 1,
+      "periodsPerSession": 3,
+      "capacity": 40,
+      "status": "finished"
+    },
+    {
+      "id": 201,
+      "code": "REACT201-K16A-2627",
+      "subjectId": 4,
+      "classId": 1,
+      "lecturerId": 1,
+      "semesterId": 2,
+      "room": "A201",
+      "weekday": 2,
+      "shift": 1,
+      "periodsPerSession": 3,
+      "capacity": 40,
+      "status": "open"
+    }
+  ],
+  "registrations": [
+    {
+      "id": 1,
+      "studentId": 1,
+      "courseSectionId": 201,
+      "registeredAt": "2026-09-02",
+      "status": "registered"
+    },
+    {
+      "id": 2,
+      "studentId": 2,
+      "courseSectionId": 201,
+      "registeredAt": "2026-09-02",
+      "status": "registered"
+    },
+    {
+      "id": 3,
+      "studentId": 3,
+      "courseSectionId": 201,
+      "registeredAt": "2026-09-03",
+      "status": "registered"
+    }
+  ],
+  "attendanceSessions": [
+    {
+      "id": 1,
+      "courseSectionId": 201,
+      "date": "2026-09-07",
+      "topic": "Component, props và state",
+      "periods": 3
+    },
+    {
+      "id": 2,
+      "courseSectionId": 201,
+      "date": "2026-09-14",
+      "topic": "useState và useEffect",
+      "periods": 3
+    },
+    {
+      "id": 3,
+      "courseSectionId": 201,
+      "date": "2026-09-21",
+      "topic": "React Router và protected route",
+      "periods": 3
+    }
+  ],
+  "attendanceRecords": [
+    {
+      "id": 1,
+      "sessionId": 1,
+      "studentId": 1,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 2,
+      "sessionId": 1,
+      "studentId": 2,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 3,
+      "sessionId": 1,
+      "studentId": 3,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 4,
+      "sessionId": 2,
+      "studentId": 1,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 5,
+      "sessionId": 2,
+      "studentId": 2,
+      "status": "absent",
+      "absentPeriods": 2,
+      "note": ""
+    },
+    {
+      "id": 6,
+      "sessionId": 2,
+      "studentId": 3,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 7,
+      "sessionId": 3,
+      "studentId": 1,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 8,
+      "sessionId": 3,
+      "studentId": 2,
+      "status": "present",
+      "absentPeriods": 0,
+      "note": ""
+    },
+    {
+      "id": 9,
+      "sessionId": 3,
+      "studentId": 3,
+      "status": "absent",
+      "absentPeriods": 1,
+      "note": ""
+    }
+  ],
+  "scores": [
+    {
+      "id": 1,
+      "studentId": 1,
+      "courseSectionId": 101,
+      "attendance": 9,
+      "midterm": 8,
+      "final": 8,
+      "total": 8.1,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "id": 2,
+      "studentId": 1,
+      "courseSectionId": 102,
+      "attendance": 9,
+      "midterm": 8,
+      "final": 8.5,
+      "total": 8.4,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "id": 3,
+      "studentId": 2,
+      "courseSectionId": 101,
+      "attendance": 8,
+      "midterm": 7,
+      "final": 7.5,
+      "total": 7.4,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "id": 4,
+      "studentId": 2,
+      "courseSectionId": 102,
+      "attendance": 8,
+      "midterm": 7.5,
+      "final": 7,
+      "total": 7.25,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "id": 5,
+      "studentId": 3,
+      "courseSectionId": 101,
+      "attendance": 9,
+      "midterm": 8.5,
+      "final": 8,
+      "total": 8.25,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "id": 6,
+      "studentId": 3,
+      "courseSectionId": 102,
+      "attendance": 8.5,
+      "midterm": 8,
+      "final": 7.5,
+      "total": 7.75,
+      "letter": "B",
+      "classification": "Khá"
+    },
+    {
+      "studentId": 1,
+      "courseSectionId": 201,
+      "attendance": 10,
+      "midterm": 10,
+      "final": 10,
+      "total": 10.0,
+      "letter": "A",
+      "classification": "Giỏi",
+      "id": 7
+    },
+    {
+      "studentId": 2,
+      "courseSectionId": 201,
+      "attendance": 3,
+      "midterm": 3,
+      "final": 3,
+      "total": 3.0,
+      "letter": "F",
+      "classification": "Kém",
+      "id": 8
+    },
+    {
+      "studentId": 3,
+      "courseSectionId": 201,
+      "attendance": 2,
+      "midterm": 2,
+      "final": 3,
+      "total": 2.6,
+      "letter": "F",
+      "classification": "Kém",
+      "id": 9
+    }
+  ],
+  "announcements": [
+    {
+      "id": 1,
+      "title": "Thông báo kế hoạch đăng ký học phần học kỳ 1 năm học 2026–2027",
+      "summary": "Sinh viên kiểm tra môn tiên quyết và đăng ký lớp học phần trong thời gian học kỳ demo.",
+      "content": "Cổng đăng ký học phần của dữ liệu demo mở từ 01/09/2026 đến 10/01/2027. Sinh viên cần kiểm tra chương trình đào tạo, môn tiên quyết và tình trạng lớp học phần trước khi xác nhận đăng ký.",
+      "publishedAt": "2026-09-01",
+      "audience": "all"
+    },
+    {
+      "id": 2,
+      "title": "Hướng dẫn theo dõi điểm danh và điều kiện dự thi",
+      "summary": "Tỷ lệ vắng được tổng hợp theo từng lớp học phần và đối chiếu ngưỡng vắng tối đa của môn học.",
+      "content": "Sinh viên theo dõi lịch sử điểm danh trên hệ thống. Khi tỷ lệ vắng vượt ngưỡng tối đa của môn học, hệ thống hiển thị cảnh báo không đủ điều kiện dự thi để sinh viên chủ động trao đổi với giảng viên và Phòng Đào tạo.",
+      "publishedAt": "2026-09-10",
+      "audience": "student"
+    },
+    {
+      "id": 3,
+      "title": "Tra cứu chương trình đào tạo áp dụng từ năm 2026",
+      "summary": "Danh sách chương trình đào tạo, môn học và số tín chỉ được công khai trên cổng thông tin.",
+      "content": "Khách và sinh viên có thể tra cứu chương trình đào tạo đang áp dụng theo từng ngành. Danh sách môn học hiển thị mã môn, tên môn và số tín chỉ để phục vụ tham khảo kế hoạch học tập.",
+      "publishedAt": "2026-09-15",
+      "audience": "all"
+    }
+  ]
+}
