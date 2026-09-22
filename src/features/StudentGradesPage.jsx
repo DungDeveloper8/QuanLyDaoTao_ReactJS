@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import useAuth from '../core/auth/useAuth.js';
 import { getAllData } from '../core/api/apiClient.js';
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx';
-import ExcelExportButton from '../shared/components/ExcelExportButton.jsx';
 import PageHeader from '../shared/components/PageHeader.jsx';
 import StatCard from '../shared/components/StatCard.jsx';
 import StatusBadge from '../shared/components/StatusBadge.jsx';
@@ -45,51 +44,12 @@ export default function StudentGradesPage() {
     (item) => Number(item.studentId) === Number(user.studentId),
   );
 
-  const exportRows = view.scores.map((score) => {
-    const section = view.sections.find((item) => Number(item.id) === Number(score.courseSectionId));
-    const subject = data.subjects.find((item) => Number(item.id) === Number(section?.subjectId));
-    return {
-      studentCode: student?.code || '',
-      fullName: student?.fullName || '',
-      classCode: classItem?.code || '',
-      subjectCode: subject?.code || '',
-      subjectName: subject?.name || '',
-      kt1: score.kt1,
-      kt2: score.kt2,
-      kt3: score.kt3,
-      exam: score.exam,
-      total: score.total,
-      letter: score.letter,
-      result: isPassed(score.total) ? 'Đạt' : 'Không đạt',
-    };
-  });
 
   return (
     <div>
       <PageHeader
         title="Bảng điểm sinh viên"
         description={`${student?.code || ''} - ${student?.fullName || ''}${classItem ? ` · ${classItem.code}` : ''}`}
-        actions={(
-          <ExcelExportButton
-            fileName={`bang-diem-${student?.code || 'sinh-vien'}.xls`}
-            sheetName="Bang diem sinh vien"
-            rows={exportRows}
-            columns={[
-              { label: 'Mã SV', value: 'studentCode' },
-              { label: 'Họ tên', value: 'fullName', width: 170 },
-              { label: 'Lớp', value: 'classCode' },
-              { label: 'Mã môn', value: 'subjectCode' },
-              { label: 'Môn học', value: 'subjectName', width: 190 },
-              { label: 'KT1', value: 'kt1', type: 'Number' },
-              { label: 'KT2', value: 'kt2', type: 'Number' },
-              { label: 'KT3', value: 'kt3', type: 'Number' },
-              { label: 'Điểm thi', value: 'exam', type: 'Number' },
-              { label: 'Tổng kết', value: 'total', type: 'Number' },
-              { label: 'Điểm chữ', value: 'letter' },
-              { label: 'Kết quả', value: 'result' },
-            ]}
-          />
-        )}
       />
 
       <div className="stats-grid">
@@ -121,10 +81,10 @@ export default function StudentGradesPage() {
           <thead>
             <tr>
               <th>Môn học</th>
-              <th>KT1</th>
-              <th>KT2</th>
-              <th>KT3</th>
-              <th>Điểm thi</th>
+              <th>KT1<br /><small>Chuyên cần</small></th>
+              <th>KT2<br /><small>Giữa kỳ 1</small></th>
+              <th>KT3<br /><small>Giữa kỳ 2</small></th>
+              <th>Thi cuối kỳ</th>
               <th>Tổng kết</th>
               <th>Điểm chữ</th>
               <th>Xếp loại</th>

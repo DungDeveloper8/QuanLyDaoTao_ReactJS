@@ -592,6 +592,14 @@
       "content": "Khách và sinh viên có thể tra cứu chương trình đào tạo đang áp dụng theo từng ngành. Danh sách môn học hiển thị mã môn, tên môn và số tín chỉ để phục vụ tham khảo kế hoạch học tập.",
       "publishedAt": "2026-09-15",
       "audience": "all"
+    },
+    {
+      "id": 4,
+      "title": "Nhắc hoàn thành điểm thành phần và điểm thi học kỳ 1",
+      "summary": "Giảng viên kiểm tra danh sách lớp học phần và hoàn thành KT1, KT2, KT3, điểm thi trước khi khóa sổ điểm.",
+      "content": "Giảng viên phụ trách lớp học phần cần rà soát danh sách sinh viên, chuyên cần và các thành phần KT1, KT2, KT3, điểm thi. Hệ thống tự tính điểm tổng kết và xếp loại sau khi lưu đủ các thành phần.",
+      "publishedAt": "2026-09-20",
+      "audience": "lecturer"
     }
   ]
 }

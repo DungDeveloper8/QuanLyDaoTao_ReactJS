@@ -19,10 +19,10 @@ const SCORE_EXCEL_COLUMNS = [
   { label: 'Mã sinh viên', value: 'studentCode', width: 95 },
   { label: 'Họ và tên', value: 'fullName', width: 170 },
   { label: 'Mã lớp học phần', value: 'sectionCode', width: 145 },
-  { label: 'KT1', value: 'kt1', type: 'Number', width: 70 },
-  { label: 'KT2', value: 'kt2', type: 'Number', width: 70 },
-  { label: 'KT3', value: 'kt3', type: 'Number', width: 70 },
-  { label: 'Điểm thi', value: 'exam', type: 'Number', width: 80 },
+  { label: 'KT1 (Chuyên cần)', value: 'kt1', type: 'Number', width: 110 },
+  { label: 'KT2 (Giữa kỳ 1)', value: 'kt2', type: 'Number', width: 110 },
+  { label: 'KT3 (Giữa kỳ 2)', value: 'kt3', type: 'Number', width: 110 },
+  { label: 'Thi cuối kỳ', value: 'exam', type: 'Number', width: 100 },
   { label: 'Tổng kết', value: 'total', type: 'Number', width: 85 },
   { label: 'Điểm chữ', value: 'letter', width: 75 },
   { label: 'Xếp loại', value: 'classification', width: 90 },
@@ -31,10 +31,10 @@ const SCORE_EXCEL_COLUMNS = [
 const SCORE_EXCEL_HEADERS = {
   studentCode: ['Mã sinh viên', 'Mã SV', 'studentCode'],
   sectionCode: ['Mã lớp học phần', 'Mã lớp HP', 'sectionCode'],
-  kt1: ['KT1', 'Điểm KT1', 'kt1'],
-  kt2: ['KT2', 'Điểm KT2', 'kt2'],
-  kt3: ['KT3', 'Điểm KT3', 'kt3'],
-  exam: ['Điểm thi', 'Thi', 'exam'],
+  kt1: ['KT1 (Chuyên cần)', 'KT1', 'Điểm KT1', 'kt1'],
+  kt2: ['KT2 (Giữa kỳ 1)', 'KT2', 'Điểm KT2', 'kt2'],
+  kt3: ['KT3 (Giữa kỳ 2)', 'KT3', 'Điểm KT3', 'kt3'],
+  exam: ['Thi cuối kỳ', 'Điểm thi', 'Thi', 'exam'],
 };
 
 function scorePayload(studentId, sectionId, draft, subject) {
@@ -295,10 +295,11 @@ export default function LecturerScoresPage() {
     <div>
       <PageHeader
         title="Nhập điểm & Bảng điểm học phần"
-        description="Nhập KT1, KT2, KT3, điểm thi và xem kết quả theo lớp học phần."
+        description="Nhập KT1 (chuyên cần), KT2–KT3 (giữa kỳ), thi cuối kỳ và xem kết quả theo lớp học phần."
         actions={(
           <div className="page-actions">
             <ExcelExportButton
+              className="btn-sm"
               fileName={`mau-nhap-diem-${section?.code || 'lop-hoc-phan'}.xls`}
               sheetName="Mau nhap diem"
               rows={students.map((student) => ({
@@ -315,13 +316,15 @@ export default function LecturerScoresPage() {
               Tải mẫu điểm
             </ExcelExportButton>
             <ExcelImportButton
+              className="btn-sm"
               onImport={importScores}
               disabled={!sectionId || importing || saving}
-              title="Nhập KT1, KT2, KT3 và điểm thi theo mã sinh viên"
+              title="Nhập KT1, KT2, KT3 và thi cuối kỳ theo mã sinh viên"
             >
               {importing ? 'Đang nhập...' : 'Nhập điểm Excel'}
             </ExcelImportButton>
             <ExcelExportButton
+              className="btn-sm"
               fileName={`bang-diem-hoc-phan-${section?.code || 'lop-hoc-phan'}.xls`}
               sheetName="Bang diem hoc phan"
               rows={students.map((student) => {
@@ -396,10 +399,10 @@ export default function LecturerScoresPage() {
           <thead>
             <tr>
               <th>Sinh viên</th>
-              <th>KT1</th>
-              <th>KT2</th>
-              <th>KT3</th>
-              <th>Điểm thi</th>
+              <th>KT1<br /><small>Chuyên cần</small></th>
+              <th>KT2<br /><small>Giữa kỳ 1</small></th>
+              <th>KT3<br /><small>Giữa kỳ 2</small></th>
+              <th>Thi cuối kỳ</th>
               <th>Tổng kết</th>
               <th>Xếp loại</th>
               <th>Điều kiện thi</th>

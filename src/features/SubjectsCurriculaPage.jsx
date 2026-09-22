@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { createOne, getAllData, removeOne, updateOne } from '../core/api/apiClient.js'
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx'
 import Modal from '../shared/components/Modal.jsx'
-import ExcelExportButton, { ExcelImportButton } from '../shared/components/ExcelExportButton.jsx'
 import PageHeader from '../shared/components/PageHeader.jsx'
 import Pagination from '../shared/components/Pagination.jsx'
 import StatusBadge from '../shared/components/StatusBadge.jsx'
@@ -10,44 +9,9 @@ import {
   getPrerequisiteCyclePath,
   prerequisiteWouldCreateCycle,
 } from '../shared/utils/trainingRules.js'
-import { getExcelNumber, getExcelValue } from '../shared/utils/exportExcel.js'
 
 const PAGE_SIZE = 8
 
-const SUBJECT_EXCEL_COLUMNS = [
-  { label: 'Mã môn', value: 'code', width: 90 },
-  { label: 'Tên môn học', value: 'name', width: 210 },
-  { label: 'Tín chỉ', value: 'credits', type: 'Number', width: 70 },
-  { label: 'Giờ lý thuyết', value: 'theoryHours', type: 'Number', width: 90 },
-  { label: 'Giờ thực hành', value: 'practiceHours', type: 'Number', width: 90 },
-  { label: 'Môn tiên quyết', value: 'prerequisites', width: 130 },
-  { label: 'KT1 (%)', value: 'kt1Weight', type: 'Number', width: 80 },
-  { label: 'KT2 (%)', value: 'kt2Weight', type: 'Number', width: 80 },
-  { label: 'KT3 (%)', value: 'kt3Weight', type: 'Number', width: 80 },
-  { label: 'Điểm thi (%)', value: 'examWeight', type: 'Number', width: 90 },
-  { label: 'Vắng tối đa (%)', value: 'maxAbsenceRate', type: 'Number', width: 100 },
-]
-
-const SUBJECT_EXCEL_HEADERS = {
-  code: ['Mã môn', 'Ma mon', 'code'],
-  name: ['Tên môn học', 'Ten mon hoc', 'Tên môn', 'name'],
-  credits: ['Tín chỉ', 'Tin chi', 'credits'],
-  theoryHours: ['Giờ lý thuyết', 'Gio ly thuyet', 'theoryHours'],
-  practiceHours: ['Giờ thực hành', 'Gio thuc hanh', 'practiceHours'],
-  prerequisites: ['Môn tiên quyết', 'Mon tien quyet', 'prerequisites'],
-  kt1Weight: ['KT1 (%)', 'kt1Weight'],
-  kt2Weight: ['KT2 (%)', 'kt2Weight'],
-  kt3Weight: ['KT3 (%)', 'kt3Weight'],
-  examWeight: ['Điểm thi (%)', 'Diem thi (%)', 'examWeight'],
-  maxAbsenceRate: ['Vắng tối đa (%)', 'Vang toi da (%)', 'maxAbsenceRate'],
-}
-
-function prerequisiteCodes(value) {
-  return String(value || '')
-    .split(/[,;|]/)
-    .map((item) => item.trim().toUpperCase())
-    .filter(Boolean)
-}
 
 const emptySubject = {
   code: '',
@@ -82,7 +46,6 @@ export default function SubjectsCurriculaPage() {
   const [form, setForm] = useState(emptySubject)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [importing, setImporting] = useState(false)
   const [notice, setNotice] = useState(null)
 
   async function load() {
@@ -316,166 +279,6 @@ export default function SubjectsCurriculaPage() {
     }
   }
 
-  async function importSubjects(rows) {
-    setNotice(null)
-
-    if (!rows.length) {
-      throw new Error('Tệp Excel không có dữ liệu môn học.')
-    }
-
-    const existingByCode = new Map(
-      data.subjects.map((subject) => [subject.code.trim().toUpperCase(), subject]),
-    )
-    const seenCodes = new Set()
-    let nextTemporaryId = -1
-
-    const candidates = rows.map((row, index) => {
-      const rowNumber = index + 2
-      const code = String(getExcelValue(row, SUBJECT_EXCEL_HEADERS.code) || '').trim().toUpperCase()
-      const name = String(getExcelValue(row, SUBJECT_EXCEL_HEADERS.name) || '').trim()
-
-      if (!code || !name) {
-        throw new Error(`Dòng ${rowNumber}: mã môn và tên môn là bắt buộc.`)
-      }
-      if (seenCodes.has(code)) {
-        throw new Error(`Dòng ${rowNumber}: mã môn ${code} bị lặp trong tệp.`)
-      }
-      seenCodes.add(code)
-
-      const existing = existingByCode.get(code)
-      const fallback = existing || emptySubject
-      const candidate = {
-        id: existing?.id ?? nextTemporaryId--,
-        existing,
-        rowNumber,
-        code,
-        name,
-        credits: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.credits, fallback.credits),
-        theoryHours: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.theoryHours, fallback.theoryHours),
-        practiceHours: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.practiceHours, fallback.practiceHours),
-        kt1Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt1Weight, fallback.kt1Weight),
-        kt2Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt2Weight, fallback.kt2Weight),
-        kt3Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt3Weight, fallback.kt3Weight),
-        examWeight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.examWeight, fallback.examWeight),
-        maxAbsenceRate: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.maxAbsenceRate, fallback.maxAbsenceRate),
-        prerequisiteCodes: prerequisiteCodes(getExcelValue(row, SUBJECT_EXCEL_HEADERS.prerequisites)),
-        prerequisiteIds: [],
-      }
-
-      const numericValues = [
-        candidate.credits,
-        candidate.theoryHours,
-        candidate.practiceHours,
-        candidate.kt1Weight,
-        candidate.kt2Weight,
-        candidate.kt3Weight,
-        candidate.examWeight,
-        candidate.maxAbsenceRate,
-      ]
-      if (numericValues.some((value) => !Number.isFinite(value))) {
-        throw new Error(`Dòng ${rowNumber}: có giá trị số không hợp lệ.`)
-      }
-      if (candidate.credits <= 0 || candidate.theoryHours < 0 || candidate.practiceHours < 0) {
-        throw new Error(`Dòng ${rowNumber}: tín chỉ/giờ học không hợp lệ.`)
-      }
-      if (candidate.kt1Weight + candidate.kt2Weight + candidate.kt3Weight + candidate.examWeight !== 100) {
-        throw new Error(`Dòng ${rowNumber}: tổng trọng số KT1, KT2, KT3 và điểm thi phải bằng 100%.`)
-      }
-      if (candidate.maxAbsenceRate < 0 || candidate.maxAbsenceRate > 100) {
-        throw new Error(`Dòng ${rowNumber}: vắng tối đa phải trong khoảng 0–100%.`)
-      }
-
-      return candidate
-    })
-
-    const idByCode = new Map(data.subjects.map((subject) => [subject.code.toUpperCase(), Number(subject.id)]))
-    candidates.forEach((candidate) => idByCode.set(candidate.code, Number(candidate.id)))
-
-    for (const candidate of candidates) {
-      candidate.prerequisiteIds = candidate.prerequisiteCodes.map((code) => {
-        const id = idByCode.get(code)
-        if (id == null) {
-          throw new Error(`Dòng ${candidate.rowNumber}: không tìm thấy môn tiên quyết ${code}.`)
-        }
-        if (Number(id) === Number(candidate.id)) {
-          throw new Error(`Dòng ${candidate.rowNumber}: môn ${candidate.code} không thể tiên quyết cho chính nó.`)
-        }
-        return Number(id)
-      })
-    }
-
-    const importedCodes = new Set(candidates.map((candidate) => candidate.code))
-    const mergedSubjects = [
-      ...data.subjects.filter((subject) => !importedCodes.has(subject.code.toUpperCase())),
-      ...candidates.map(({ existing, rowNumber, prerequisiteCodes: codes, ...subject }) => subject),
-    ]
-    const codeById = new Map(mergedSubjects.map((subject) => [Number(subject.id), subject.code]))
-
-    for (const candidate of candidates) {
-      const cyclePath = getPrerequisiteCyclePath(candidate.id, candidate.prerequisiteIds, mergedSubjects)
-      if (cyclePath) {
-        const label = cyclePath
-          .map((id) => codeById.get(Number(id)) || `#${id}`)
-          .join(' → ')
-        throw new Error(`Dòng ${candidate.rowNumber}: môn tiên quyết tạo vòng lặp ${label}.`)
-      }
-    }
-
-    setImporting(true)
-    try {
-      const realIdByCode = new Map(
-        data.subjects.map((subject) => [subject.code.toUpperCase(), Number(subject.id)]),
-      )
-
-      for (const candidate of candidates) {
-        if (candidate.existing) continue
-        const response = await createOne('subjects', {
-          code: candidate.code,
-          name: candidate.name,
-          credits: candidate.credits,
-          theoryHours: candidate.theoryHours,
-          practiceHours: candidate.practiceHours,
-          prerequisiteIds: [],
-          kt1Weight: candidate.kt1Weight,
-          kt2Weight: candidate.kt2Weight,
-          kt3Weight: candidate.kt3Weight,
-          examWeight: candidate.examWeight,
-          maxAbsenceRate: candidate.maxAbsenceRate,
-        })
-        realIdByCode.set(candidate.code, Number(response.data.id))
-      }
-
-      for (const candidate of candidates) {
-        const realId = realIdByCode.get(candidate.code)
-        const resolvedPrerequisites = candidate.prerequisiteCodes.map((code) => realIdByCode.get(code))
-        const payload = {
-          ...(candidate.existing || {}),
-          code: candidate.code,
-          name: candidate.name,
-          credits: candidate.credits,
-          theoryHours: candidate.theoryHours,
-          practiceHours: candidate.practiceHours,
-          prerequisiteIds: resolvedPrerequisites,
-          kt1Weight: candidate.kt1Weight,
-          kt2Weight: candidate.kt2Weight,
-          kt3Weight: candidate.kt3Weight,
-          examWeight: candidate.examWeight,
-          maxAbsenceRate: candidate.maxAbsenceRate,
-        }
-        await updateOne('subjects', realId, payload)
-      }
-
-      await load()
-      setPage(1)
-      setNotice({
-        tone: 'success',
-        text: `Đã nhập ${candidates.length} môn học từ Excel (${candidates.filter((item) => item.existing).length} cập nhật, ${candidates.filter((item) => !item.existing).length} thêm mới).`,
-      })
-    } finally {
-      setImporting(false)
-    }
-  }
-
   async function remove(item) {
     if (tab === 'subjects') {
       const hasCourseSection = data.courseSections.some(
@@ -518,82 +321,9 @@ export default function SubjectsCurriculaPage() {
         title="Môn học & Chương trình đào tạo"
         description="Danh mục môn học và chương trình đào tạo."
         actions={(
-          <div className="page-actions">
-            {tab === 'subjects' ? (
-              <>
-                <ExcelExportButton
-                  fileName="mau-nhap-mon-hoc.xls"
-                  sheetName="Mau nhap mon hoc"
-                  rows={[{
-                    code: 'WEB102',
-                    name: 'Thiết kế giao diện Responsive',
-                    credits: 3,
-                    theoryHours: 30,
-                    practiceHours: 30,
-                    prerequisites: 'WEB101',
-                    kt1Weight: 10,
-                    kt2Weight: 15,
-                    kt3Weight: 15,
-                    examWeight: 60,
-                    maxAbsenceRate: 20,
-                  }]}
-                  columns={SUBJECT_EXCEL_COLUMNS}
-                >
-                  Tải mẫu Excel
-                </ExcelExportButton>
-                <ExcelImportButton
-                  onImport={importSubjects}
-                  disabled={importing || saving}
-                  title="Nhập danh sách môn học từ Excel; mã đã tồn tại sẽ được cập nhật"
-                />
-                <ExcelExportButton
-                  fileName="danh-sach-mon-hoc.xls"
-                  sheetName="Mon hoc"
-                  rows={filteredItems.map((item) => ({
-                    ...item,
-                    prerequisites: (item.prerequisiteIds || [])
-                      .map((id) => data.subjects.find(
-                        (subject) => Number(subject.id) === Number(id),
-                      )?.code)
-                      .filter(Boolean)
-                      .join(', '),
-                  }))}
-                  columns={SUBJECT_EXCEL_COLUMNS}
-                />
-              </>
-            ) : (
-              <ExcelExportButton
-                fileName="chuong-trinh-dao-tao.xls"
-                sheetName="Chuong trinh dao tao"
-                rows={filteredItems}
-                columns={[
-                  { label: 'Chương trình', value: 'name', width: 220 },
-                  {
-                    label: 'Ngành',
-                    value: (item) => data.majors.find(
-                      (major) => Number(major.id) === Number(item.majorId),
-                    )?.name || '',
-                    width: 190,
-                  },
-                  { label: 'Phiên bản', value: 'version', width: 90 },
-                  {
-                    label: 'Số môn',
-                    value: (item) => item.subjectIds?.length || 0,
-                    type: 'Number',
-                    width: 75,
-                  },
-                  {
-                    label: 'Trạng thái',
-                    value: (item) => item.active ? 'Đang áp dụng' : 'Ngừng áp dụng',
-                    width: 110,
-                  },
-                ]}
-              />
-            )}
-            <button className="btn btn-primary" type="button" onClick={openCreate}>
-              + Thêm mới
-            </button>
-          </div>
+          <button className="btn btn-primary" type="button" onClick={openCreate}>
+            + Thêm mới
+          </button>
         )}
       />
 
@@ -805,7 +535,7 @@ export default function SubjectsCurriculaPage() {
               />
             </label>
             <label>
-              KT1 (%)
+              KT1 - Chuyên cần (%)
               <input
                 type="number"
                 min="0"
@@ -815,7 +545,7 @@ export default function SubjectsCurriculaPage() {
               />
             </label>
             <label>
-              KT2 (%)
+              KT2 - Giữa kỳ 1 (%)
               <input
                 type="number"
                 min="0"
@@ -825,7 +555,7 @@ export default function SubjectsCurriculaPage() {
               />
             </label>
             <label>
-              KT3 (%)
+              KT3 - Giữa kỳ 2 (%)
               <input
                 type="number"
                 min="0"
@@ -835,7 +565,7 @@ export default function SubjectsCurriculaPage() {
               />
             </label>
             <label>
-              Điểm thi (%)
+              Thi cuối kỳ (%)
               <input
                 type="number"
                 min="0"

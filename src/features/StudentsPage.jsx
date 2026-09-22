@@ -468,6 +468,7 @@ export default function StudentsPage() {
         actions={(
           <div className="page-actions">
             <ExcelExportButton
+              className="btn-sm"
               fileName="mau-nhap-sinh-vien.xls"
               sheetName="Mau nhap sinh vien"
               rows={STUDENT_EXCEL_TEMPLATE}
@@ -476,6 +477,7 @@ export default function StudentsPage() {
               Tải mẫu Excel
             </ExcelExportButton>
             <ExcelImportButton
+              className="btn-sm"
               onImport={importStudents}
               disabled={importing || saving}
               title="Nhập sinh viên từ Excel; mã SV đã có sẽ được cập nhật"
@@ -483,6 +485,7 @@ export default function StudentsPage() {
               {importing ? 'Đang nhập...' : 'Nhập Excel'}
             </ExcelImportButton>
             <ExcelExportButton
+              className="btn-sm"
               fileName="danh-sach-sinh-vien.xls"
               sheetName="Sinh vien"
               rows={filteredStudents.map((student) => ({

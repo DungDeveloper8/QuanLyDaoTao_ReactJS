@@ -301,6 +301,96 @@ function normalizeLecturerMutation(database, request, resource, id) {
   }
 }
 
+
+function normalizeAdminLecturerMutation(database, request, id) {
+  const existing = getRecord(database, 'lecturers', id);
+  const candidate = { ...(existing || {}), ...(request.body || {}) };
+  candidate.code = String(candidate.code || '').trim().toUpperCase();
+  candidate.fullName = String(candidate.fullName || '').trim();
+  candidate.email = String(candidate.email || '').trim().toLowerCase();
+  candidate.phone = String(candidate.phone || '').trim();
+  candidate.facultyId = Number(candidate.facultyId);
+
+  if (!candidate.code || !candidate.fullName || !candidate.facultyId) {
+    throw new Error('Mã giảng viên, họ tên và khoa là bắt buộc.');
+  }
+  if (!getRecord(database, 'faculties', candidate.facultyId)) {
+    throw new Error('Khoa được chọn không tồn tại.');
+  }
+  const duplicatedCode = database.get('lecturers').value().some(
+    (item) => Number(item.id) !== Number(existing?.id) && String(item.code).toLowerCase() === candidate.code.toLowerCase(),
+  );
+  if (duplicatedCode) throw new Error('Mã giảng viên đã tồn tại.');
+  const duplicatedEmail = candidate.email && database.get('lecturers').value().some(
+    (item) => Number(item.id) !== Number(existing?.id) && String(item.email || '').toLowerCase() === candidate.email,
+  );
+  if (duplicatedEmail) throw new Error('Email giảng viên đã tồn tại.');
+
+  request.body = candidate;
+}
+
+function ensureLecturerCanDelete(database, id) {
+  const lecturerId = Number(id);
+  if (database.get('courseSections').value().some((item) => Number(item.lecturerId) === lecturerId)) {
+    throw new Error('Không thể xóa giảng viên đã được phân công lớp học phần.');
+  }
+  if (database.get('users').value().some((item) => Number(item.lecturerId) === lecturerId)) {
+    throw new Error('Không thể xóa giảng viên đang được liên kết với tài khoản đăng nhập.');
+  }
+}
+
+function normalizeAdminAnnouncementMutation(request, existing) {
+  const candidate = { ...(existing || {}), ...(request.body || {}) };
+  candidate.title = String(candidate.title || '').trim();
+  candidate.summary = String(candidate.summary || '').trim();
+  candidate.content = String(candidate.content || '').trim();
+  candidate.publishedAt = String(candidate.publishedAt || '').trim();
+  candidate.audience = String(candidate.audience || 'all').trim();
+
+  if (!candidate.title || !candidate.summary || !candidate.content || !candidate.publishedAt) {
+    throw new Error('Tiêu đề, tóm tắt, nội dung và ngày đăng là bắt buộc.');
+  }
+  if (!['all', 'student', 'lecturer'].includes(candidate.audience)) {
+    throw new Error('Đối tượng nhận thông báo không hợp lệ.');
+  }
+  request.body = candidate;
+}
+
+function normalizeAdminRegistrationMutation(database, request, id) {
+  const existing = getRecord(database, 'registrations', id);
+  const candidate = { ...(existing || {}), ...(request.body || {}) };
+  candidate.studentId = Number(candidate.studentId);
+  candidate.courseSectionId = Number(candidate.courseSectionId);
+  candidate.status = candidate.status === 'cancelled' ? 'cancelled' : 'registered';
+  candidate.registeredAt = String(candidate.registeredAt || new Date().toISOString().slice(0, 10));
+
+  const student = getRecord(database, 'students', candidate.studentId);
+  const section = getRecord(database, 'courseSections', candidate.courseSectionId);
+  if (!student || !section) throw new Error('Sinh viên hoặc lớp học phần không tồn tại.');
+
+  if (candidate.status === 'registered') {
+    const registrations = database.get('registrations').value();
+    const duplicate = registrations.some(
+      (item) =>
+        Number(item.id) !== Number(existing?.id) &&
+        Number(item.studentId) === candidate.studentId &&
+        Number(item.courseSectionId) === candidate.courseSectionId &&
+        item.status === 'registered',
+    );
+    if (duplicate) throw new Error('Sinh viên đã đăng ký lớp học phần này.');
+
+    const count = registrations.filter(
+      (item) =>
+        Number(item.id) !== Number(existing?.id) &&
+        Number(item.courseSectionId) === candidate.courseSectionId &&
+        item.status === 'registered',
+    ).length;
+    if (count >= Number(section.capacity || 0)) throw new Error('Lớp học phần đã đủ sĩ số.');
+  }
+
+  request.body = candidate;
+}
+
 function studentCanMutateRegistration(database, request, user, id) {
   const ownStudentId = Number(user.studentId);
   const existing = getRecord(database, 'registrations', id);
@@ -514,42 +604,130 @@ export function createApplication({
       return;
     }
 
-    if (!['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      next();
-      return;
-    }
-
     try {
       const id = request.path.split('/').filter(Boolean)[0];
+      if (request.method === 'DELETE') {
+        const existing = getRecord(database, 'users', id);
+        if (!existing) throw new Error('Tài khoản không tồn tại.');
+        if (Number(existing.id) === Number(request.authUser.id)) {
+          throw new Error('Không thể xóa tài khoản đang đăng nhập.');
+        }
+        const activeAdmins = database.get('users').value().filter(
+          (item) => item.role === 'admin' && item.active,
+        );
+        if (existing.role === 'admin' && existing.active && activeAdmins.length <= 1) {
+          throw new Error('Hệ thống phải còn ít nhất một quản trị viên đang hoạt động.');
+        }
+        next();
+        return;
+      }
+
+      if (!['POST', 'PUT', 'PATCH'].includes(request.method)) {
+        next();
+        return;
+      }
+
       const existing = getRecord(database, 'users', id);
       const nextUser = { ...(existing || {}), ...(request.body || {}) };
       nextUser.username = String(nextUser.username || '').trim().toLowerCase();
-      if (!nextUser.username || !['admin', 'lecturer', 'student'].includes(nextUser.role)) {
-        throw new Error('Tài khoản hoặc vai trò không hợp lệ.');
+      nextUser.fullName = String(nextUser.fullName || '').trim();
+      nextUser.active = nextUser.active !== false;
+
+      if (!nextUser.username || !nextUser.fullName || !['admin', 'lecturer', 'student'].includes(nextUser.role)) {
+        throw new Error('Tài khoản, tên hiển thị hoặc vai trò không hợp lệ.');
       }
 
-      const duplicated = database
-        .get('users')
-        .value()
-        .some(
-          (item) =>
-            Number(item.id) !== Number(existing?.id) &&
-            String(item.username).toLowerCase() === nextUser.username,
-        );
+      const duplicated = database.get('users').value().some(
+        (item) =>
+          Number(item.id) !== Number(existing?.id) &&
+          String(item.username).toLowerCase() === nextUser.username,
+      );
       if (duplicated) throw new Error('Tên đăng nhập đã tồn tại.');
 
       if (!existing && !String(nextUser.password || '').trim()) {
         throw new Error('Tài khoản mới phải có mật khẩu.');
       }
+      if (existing && request.body?.password === '') nextUser.password = existing.password;
 
-      if (existing && request.body?.password === '') {
-        nextUser.password = existing.password;
+      if (existing && Number(existing.id) === Number(request.authUser.id)) {
+        if (!nextUser.active) throw new Error('Không thể khóa tài khoản đang đăng nhập.');
+        if (nextUser.role !== existing.role) throw new Error('Không thể đổi vai trò của tài khoản đang đăng nhập.');
+      }
+
+      if (nextUser.role === 'lecturer') {
+        nextUser.lecturerId = Number(nextUser.lecturerId);
+        delete nextUser.studentId;
+        if (!getRecord(database, 'lecturers', nextUser.lecturerId)) {
+          throw new Error('Tài khoản giảng viên phải liên kết với giảng viên hợp lệ.');
+        }
+        const linked = database.get('users').value().some(
+          (item) => Number(item.id) !== Number(existing?.id) && item.role === 'lecturer' && Number(item.lecturerId) === nextUser.lecturerId,
+        );
+        if (linked) throw new Error('Giảng viên này đã có tài khoản đăng nhập.');
+      } else if (nextUser.role === 'student') {
+        nextUser.studentId = Number(nextUser.studentId);
+        delete nextUser.lecturerId;
+        if (!getRecord(database, 'students', nextUser.studentId)) {
+          throw new Error('Tài khoản sinh viên phải liên kết với sinh viên hợp lệ.');
+        }
+        const linked = database.get('users').value().some(
+          (item) => Number(item.id) !== Number(existing?.id) && item.role === 'student' && Number(item.studentId) === nextUser.studentId,
+        );
+        if (linked) throw new Error('Sinh viên này đã có tài khoản đăng nhập.');
+      } else {
+        delete nextUser.lecturerId;
+        delete nextUser.studentId;
       }
 
       request.body = nextUser;
       next();
     } catch (error) {
       apiError(response, 400, error.message || 'Dữ liệu tài khoản không hợp lệ.');
+    }
+  });
+
+  app.use('/api/lecturers', (request, response, next) => {
+    if (request.authUser.role !== 'admin') {
+      next();
+      return;
+    }
+    try {
+      const id = request.path.split('/').filter(Boolean)[0];
+      if (request.method === 'DELETE') ensureLecturerCanDelete(database, id);
+      if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+        normalizeAdminLecturerMutation(database, request, id);
+      }
+      next();
+    } catch (error) {
+      apiError(response, 400, error.message || 'Dữ liệu giảng viên không hợp lệ.');
+    }
+  });
+
+  app.use('/api/announcements', (request, response, next) => {
+    if (request.authUser.role !== 'admin' || !['POST', 'PUT', 'PATCH'].includes(request.method)) {
+      next();
+      return;
+    }
+    try {
+      const id = request.path.split('/').filter(Boolean)[0];
+      normalizeAdminAnnouncementMutation(request, getRecord(database, 'announcements', id));
+      next();
+    } catch (error) {
+      apiError(response, 400, error.message || 'Dữ liệu thông báo không hợp lệ.');
+    }
+  });
+
+  app.use('/api/registrations', (request, response, next) => {
+    if (request.authUser.role !== 'admin' || !['POST', 'PUT', 'PATCH'].includes(request.method)) {
+      next();
+      return;
+    }
+    try {
+      const id = request.path.split('/').filter(Boolean)[0];
+      normalizeAdminRegistrationMutation(database, request, id);
+      next();
+    } catch (error) {
+      apiError(response, 400, error.message || 'Dữ liệu đăng ký học phần không hợp lệ.');
     }
   });
 

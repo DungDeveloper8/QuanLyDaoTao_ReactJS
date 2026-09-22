@@ -59,35 +59,6 @@ export default function ReportsPage() {
     return <ErrorState message={error} onRetry={reload} />;
   }
 
-  function downloadTemplate() {
-    downloadExcel2003({
-      fileName: 'mau-bao-cao-chuyen-can.xls',
-      sheetName: 'Mau bao cao',
-      columns: [
-        { label: 'Mã sinh viên', value: 'studentCode' },
-        { label: 'Họ và tên', value: 'fullName' },
-        { label: 'Lớp học phần', value: 'sectionCode' },
-        { label: 'Môn học', value: 'subjectName' },
-        { label: 'Tổng tiết đã học', value: 'totalPeriods' },
-        { label: 'Số tiết vắng', value: 'absentPeriods' },
-        { label: 'Tỷ lệ vắng (%)', value: 'absenceRate' },
-        { label: 'Điều kiện dự thi', value: 'eligibility' },
-      ],
-      rows: [
-        {
-          studentCode: 'SV001',
-          fullName: 'Nguyễn Văn A',
-          sectionCode: 'REACT201-K16A',
-          subjectName: 'Lập trình Web với ReactJS',
-          totalPeriods: 9,
-          absentPeriods: 0,
-          absenceRate: 0,
-          eligibility: 'Đủ điều kiện',
-        },
-      ],
-    });
-  }
-
   function exportReport() {
     downloadExcel2003({
       fileName: 'bao-cao-chuyen-can.xls',
@@ -115,16 +86,10 @@ export default function ReportsPage() {
         title="Báo cáo chuyên cần"
         description="Tổng hợp chuyên cần theo học kỳ."
         actions={
-          <div className="page-actions">
-            <button className="btn btn-light" type="button" onClick={downloadTemplate}>
-              <Icon name="download" size={15} />
-              <span>Lấy mẫu Excel</span>
-            </button>
-            <button className="btn btn-excel" type="button" onClick={exportReport}>
-              <Icon name="download" size={15} />
-              <span>Xuất Excel</span>
-            </button>
-          </div>
+          <button className="btn btn-excel btn-sm" type="button" onClick={exportReport} disabled={!rows.length}>
+            <Icon name="download" size={15} />
+            <span>Xuất báo cáo</span>
+          </button>
         }
       />
 

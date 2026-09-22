@@ -17,6 +17,13 @@ import CourseSectionsPage from '../features/CourseSectionsPage.jsx';
 import LecturerSchedulePage from '../features/LecturerSchedulePage.jsx';
 import StudentSchedulePage from '../features/StudentSchedulePage.jsx';
 import PublicInfoPage from '../features/PublicInfoPage.jsx';
+import LecturerManagementPage from '../features/LecturerManagementPage.jsx';
+import UserManagementPage from '../features/UserManagementPage.jsx';
+import AnnouncementManagementPage from '../features/AnnouncementManagementPage.jsx';
+import RegistrationManagementPage from '../features/RegistrationManagementPage.jsx';
+import LecturerDashboardPage from '../features/LecturerDashboardPage.jsx';
+import StudentAttendancePage from '../features/StudentAttendancePage.jsx';
+import StudentProfilePage from '../features/StudentProfilePage.jsx';
 
 export default function App() {
   return (
@@ -31,19 +38,25 @@ export default function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="catalogs" element={<AcademicCatalogPage />} />
           <Route path="students" element={<StudentsPage />} />
+          <Route path="lecturers" element={<LecturerManagementPage />} />
           <Route path="subjects" element={<SubjectsCurriculaPage />} />
           <Route path="course-sections" element={<CourseSectionsPage />} />
-          <Route path="reports" element={<ReportsPage />} />
+          <Route path="registrations" element={<RegistrationManagementPage />} />
           <Route path="gradebooks" element={<GradebooksPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="announcements" element={<AnnouncementManagementPage />} />
+          <Route path="users" element={<UserManagementPage />} />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute roles={['lecturer']} />}>
         <Route path="/lecturer" element={<PortalLayout />}>
-          <Route index element={<Navigate to="schedule" replace />} />
+          <Route index element={<LecturerDashboardPage />} />
           <Route path="schedule" element={<LecturerSchedulePage />} />
           <Route path="attendance" element={<LecturerAttendancePage />} />
           <Route path="scores" element={<LecturerScoresPage />} />
+          <Route path="info" element={<PublicInfoPage embedded basePath="/lecturer/info" />} />
+          <Route path="info/thong-bao/:announcementId" element={<PublicInfoPage embedded basePath="/lecturer/info" />} />
         </Route>
       </Route>
 
@@ -52,7 +65,9 @@ export default function App() {
           <Route index element={<Navigate to="schedule" replace />} />
           <Route path="schedule" element={<StudentSchedulePage />} />
           <Route path="register" element={<StudentRegistrationPage />} />
+          <Route path="attendance" element={<StudentAttendancePage />} />
           <Route path="grades" element={<StudentGradesPage />} />
+          <Route path="profile" element={<StudentProfilePage />} />
           <Route path="info" element={<PublicInfoPage embedded />} />
           <Route path="info/thong-bao/:announcementId" element={<PublicInfoPage embedded />} />
         </Route>

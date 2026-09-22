@@ -7,11 +7,11 @@ import SchoolLogo from '../shared/components/SchoolLogo.jsx';
 import useFetch from '../shared/hooks/useFetch.js';
 import { formatDate } from '../shared/utils/date.js';
 
-export default function PublicInfoPage({ embedded = false }) {
+export default function PublicInfoPage({ embedded = false, basePath: embeddedBasePath = '' }) {
   const { announcementId } = useParams();
   const { data, loading, error, reload } = useFetch(getPublicData, []);
   const [query, setQuery] = useState('');
-  const basePath = embedded ? '/student/info' : '/thong-tin';
+  const basePath = embeddedBasePath || (embedded ? '/student/info' : '/thong-tin');
 
   const announcements = useMemo(() => {
     const keyword = query.trim().toLowerCase();

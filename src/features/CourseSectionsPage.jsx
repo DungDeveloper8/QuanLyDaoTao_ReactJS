@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { createOne, getAllData, removeOne, updateOne } from '../core/api/apiClient.js'
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx'
 import Modal from '../shared/components/Modal.jsx'
-import ExcelExportButton from '../shared/components/ExcelExportButton.jsx'
 import PageHeader from '../shared/components/PageHeader.jsx'
 import Pagination from '../shared/components/Pagination.jsx'
 import StatusBadge from '../shared/components/StatusBadge.jsx'
@@ -297,58 +296,9 @@ export default function CourseSectionsPage() {
         title="Phân công & Thời khóa biểu"
         description="Phân công giảng dạy và thời khóa biểu lớp học phần."
         actions={(
-          <div className="page-actions">
-            <ExcelExportButton
-              fileName="phan-cong-thoi-khoa-bieu.xls"
-              sheetName="Phan cong TKB"
-              rows={filteredSections}
-              columns={[
-                { label: 'Mã lớp học phần', value: 'code', width: 115 },
-                {
-                  label: 'Môn học',
-                  value: (section) => data.subjects.find(
-                    (item) => Number(item.id) === Number(section.subjectId),
-                  )?.name || '',
-                  width: 210,
-                },
-                {
-                  label: 'Lớp',
-                  value: (section) => data.classes.find(
-                    (item) => Number(item.id) === Number(section.classId),
-                  )?.code || '',
-                  width: 90,
-                },
-                {
-                  label: 'Giảng viên',
-                  value: (section) => data.lecturers.find(
-                    (item) => Number(item.id) === Number(section.lecturerId),
-                  )?.fullName || '',
-                  width: 170,
-                },
-                {
-                  label: 'Lịch học',
-                  value: (section) => `${WEEKDAY_LABELS[section.weekday]} - ${SHIFT_LABELS[section.shift]}`,
-                  width: 120,
-                },
-                { label: 'Phòng', value: 'room', width: 80 },
-                {
-                  label: 'Đã đăng ký',
-                  value: (section) => registrationCount(section.id, data.registrations),
-                  type: 'Number',
-                  width: 80,
-                },
-                { label: 'Sĩ số tối đa', value: 'capacity', type: 'Number', width: 80 },
-                {
-                  label: 'Trạng thái',
-                  value: (section) => statusLabels[section.status] || section.status,
-                  width: 100,
-                },
-              ]}
-            />
-            <button className="btn btn-primary" onClick={openCreate}>
-              + Tạo lớp học phần
-            </button>
-          </div>
+          <button className="btn btn-primary" type="button" onClick={openCreate}>
+            + Tạo lớp học phần
+          </button>
         )}
       />
 

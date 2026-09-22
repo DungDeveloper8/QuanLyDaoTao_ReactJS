@@ -62,10 +62,10 @@ function exportColumns() {
     { label: 'Lớp', value: (row) => row.classItem?.code || '' },
     { label: 'Mã học phần', value: (row) => row.section?.code || '', width: 145 },
     { label: 'Môn học', value: (row) => row.subject?.name || '', width: 190 },
-    { label: 'KT1', value: (row) => row.score.kt1, type: 'Number' },
-    { label: 'KT2', value: (row) => row.score.kt2, type: 'Number' },
-    { label: 'KT3', value: (row) => row.score.kt3, type: 'Number' },
-    { label: 'Điểm thi', value: (row) => row.score.exam, type: 'Number' },
+    { label: 'KT1 (Chuyên cần)', value: (row) => row.score.kt1, type: 'Number' },
+    { label: 'KT2 (Giữa kỳ 1)', value: (row) => row.score.kt2, type: 'Number' },
+    { label: 'KT3 (Giữa kỳ 2)', value: (row) => row.score.kt3, type: 'Number' },
+    { label: 'Thi cuối kỳ', value: (row) => row.score.exam, type: 'Number' },
     { label: 'Tổng kết', value: (row) => row.score.total, type: 'Number' },
     { label: 'Điểm chữ', value: (row) => row.score.letter },
     { label: 'Kết quả', value: (row) => row.score.total == null ? 'Chưa nhập' : isPassed(row.score.total) ? 'Đạt' : 'Không đạt' },
@@ -82,10 +82,10 @@ function GradeTable({ rows, showSemester = false }) {
             <th>Lớp</th>
             {showSemester ? <th>Học kỳ</th> : null}
             <th>Học phần / Môn học</th>
-            <th>KT1</th>
-            <th>KT2</th>
-            <th>KT3</th>
-            <th>Điểm thi</th>
+            <th>KT1<br /><small>Chuyên cần</small></th>
+            <th>KT2<br /><small>Giữa kỳ 1</small></th>
+            <th>KT3<br /><small>Giữa kỳ 2</small></th>
+            <th>Thi cuối kỳ</th>
             <th>Tổng kết</th>
             <th>Xếp loại</th>
             <th>Kết quả</th>
@@ -196,6 +196,7 @@ export default function GradebooksPage() {
         description="Tra cứu bảng điểm theo học phần, lớp, khoa hoặc từng sinh viên."
         actions={(
           <ExcelExportButton
+            className="btn-sm"
             fileName={`bang-diem-${tab}-${fileSuffix || 'tong-hop'}.xls`}
             sheetName="Bang diem"
             rows={view.rows}

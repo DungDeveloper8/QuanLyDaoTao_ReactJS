@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import Icon from './Icon.jsx';
 
-export default function Modal({ open, title, children, onClose, width = 760 }) {
+export default function Modal({ open, title, children, onClose, width = 720 }) {
   useEffect(() => {
     if (!open) {
       return undefined;
@@ -11,6 +11,15 @@ export default function Modal({ open, title, children, onClose, width = 760 }) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   if (!open) {
     return null;

@@ -1,22 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createOne, list, removeOne, updateOne } from '../../core/api/apiClient.js';
 import { ErrorState, LoadingState } from './DataState.jsx';
-import ExcelExportButton from './ExcelExportButton.jsx';
 import Modal from './Modal.jsx';
 import Pagination from './Pagination.jsx';
 import Icon from './Icon.jsx';
-
-function getExportValue(column, item) {
-  const rendered = column.exportValue
-    ? column.exportValue(item)
-    : column.render
-      ? column.render(item)
-      : item[column.key];
-
-  return ['string', 'number', 'boolean'].includes(typeof rendered)
-    ? rendered
-    : item[column.key] ?? '';
-}
 
 function createInitialForm(fields) {
   return Object.fromEntries(
@@ -43,6 +30,14 @@ function normalizeForm(fields, form) {
   });
 
   return normalized;
+}
+
+function isVisible(field, form, editing) {
+  return typeof field.visible === 'function' ? field.visible(form, editing) : field.visible !== false;
+}
+
+function isDisabled(field, form, editing) {
+  return typeof field.disabled === 'function' ? field.disabled(form, editing) : Boolean(field.disabled);
 }
 
 export default function CrudPanel({
@@ -209,6 +204,8 @@ export default function CrudPanel({
   }
 
   const modalOpen = editing !== undefined;
+  const visibleFields = fields.filter((field) => isVisible(field, form, editing));
+  const modalEntityName = title.toLocaleLowerCase('vi-VN');
 
   return (
     <section className="crud-panel">
@@ -217,22 +214,10 @@ export default function CrudPanel({
           <h2>{title}</h2>
           <span>{items.length} bản ghi</span>
         </div>
-        <div className="page-actions">
-          <ExcelExportButton
-            className="btn-sm"
-            fileName={`${resource}.xls`}
-            sheetName={title}
-            rows={filteredItems}
-            columns={columns.map((column) => ({
-              label: column.label,
-              value: (item) => getExportValue(column, item),
-            }))}
-          />
-          <button className="btn btn-primary btn-sm" type="button" onClick={openCreate}>
-            <Icon name="plus" size={15} />
-            <span>Thêm mới</span>
-          </button>
-        </div>
+        <button className="btn btn-primary btn-sm" type="button" onClick={openCreate}>
+          <Icon name="plus" size={15} />
+          <span>Thêm mới</span>
+        </button>
       </div>
 
       <div className="toolbar">
@@ -301,56 +286,88 @@ export default function CrudPanel({
 
       <Modal
         open={modalOpen}
-        title={editing ? `Cập nhật ${title}` : `Thêm ${title}`}
+        title={editing ? `Cập nhật ${modalEntityName}` : `Thêm ${modalEntityName}`}
         onClose={() => setEditing(undefined)}
+        width={700}
       >
         <form className="form-grid" onSubmit={handleSave}>
-          {fields.map((field) => (
-            <label key={field.name} className={field.full ? 'full' : ''}>
-              {field.label}
-              {field.type === 'textarea' ? (
-                <textarea
-                  rows="3"
-                  value={form[field.name] ?? ''}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, [field.name]: event.target.value }));
-                  }}
-                />
-              ) : field.type === 'select' || field.type === 'select-number' ? (
-                <select
-                  value={form[field.name] ?? ''}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, [field.name]: event.target.value }));
-                  }}
-                >
-                  <option value="">-- Chọn --</option>
-                  {(field.options || []).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'checkbox' ? (
-                <input
-                  type="checkbox"
-                  checked={Boolean(form[field.name])}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, [field.name]: event.target.checked }));
-                  }}
-                />
-              ) : (
-                <input
-                  type={field.type || 'text'}
-                  min={field.min}
-                  max={field.max}
-                  value={form[field.name] ?? ''}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, [field.name]: event.target.value }));
-                  }}
-                />
-              )}
-            </label>
-          ))}
+          {visibleFields.map((field) => {
+            const fieldId = `${resource}-${field.name}`;
+            const disabled = isDisabled(field, form, editing);
+            const wrapperClass = `form-field${field.full ? ' full' : ''}`;
+
+            if (field.type === 'checkbox') {
+              return (
+                <div key={field.name} className={wrapperClass}>
+                  <label className="switch-field" htmlFor={fieldId}>
+                    <input
+                      id={fieldId}
+                      type="checkbox"
+                      checked={Boolean(form[field.name])}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        setForm((current) => ({ ...current, [field.name]: event.target.checked }));
+                      }}
+                    />
+                    <span className="switch-control" aria-hidden="true" />
+                    <span className="switch-copy">
+                      <strong>{field.label}</strong>
+                      {field.help ? <small>{field.help}</small> : null}
+                    </span>
+                  </label>
+                </div>
+              );
+            }
+
+            return (
+              <div key={field.name} className={wrapperClass}>
+                <label className="field-label" htmlFor={fieldId}>{field.label}</label>
+                {field.type === 'textarea' ? (
+                  <textarea
+                    id={fieldId}
+                    rows="3"
+                    value={form[field.name] ?? ''}
+                    disabled={disabled}
+                    placeholder={field.placeholder}
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, [field.name]: event.target.value }));
+                    }}
+                  />
+                ) : field.type === 'select' || field.type === 'select-number' ? (
+                  <select
+                    id={fieldId}
+                    value={form[field.name] ?? ''}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, [field.name]: event.target.value }));
+                    }}
+                  >
+                    <option value="">-- Chọn --</option>
+                    {(field.options || []).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={fieldId}
+                    type={field.type || 'text'}
+                    min={field.min}
+                    max={field.max}
+                    value={form[field.name] ?? ''}
+                    disabled={disabled}
+                    placeholder={field.placeholder}
+                    autoComplete={field.autoComplete}
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, [field.name]: event.target.value }));
+                    }}
+                  />
+                )}
+                {field.help ? <div className="field-help">{field.help}</div> : null}
+              </div>
+            );
+          })}
 
           {formError ? (
             <div className="form-alert form-alert-error full">{formError}</div>
