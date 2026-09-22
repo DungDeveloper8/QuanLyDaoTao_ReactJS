@@ -262,26 +262,29 @@ function normalizeLecturerMutation(database, request, resource, id) {
     const candidate = { ...(existing || {}), ...(request.body || {}) };
     const section = getRecord(database, 'courseSections', candidate.courseSectionId);
     const subject = getRecord(database, 'subjects', section?.subjectId);
-    const attendance = Number(candidate.attendance);
-    const midterm = Number(candidate.midterm);
-    const final = Number(candidate.final);
-    if (![attendance, midterm, final].every((value) => Number.isFinite(value) && value >= 0 && value <= 10)) {
-      throw new Error('Điểm phải nằm trong khoảng từ 0 đến 10.');
+    const kt1 = Number(candidate.kt1);
+    const kt2 = Number(candidate.kt2);
+    const kt3 = Number(candidate.kt3);
+    const exam = Number(candidate.exam);
+    if (![kt1, kt2, kt3, exam].every((value) => Number.isFinite(value) && value >= 0 && value <= 10)) {
+      throw new Error('KT1, KT2, KT3 và điểm thi phải nằm trong khoảng từ 0 đến 10.');
     }
-    const attendanceWeight = Number(subject?.attendanceWeight ?? 10);
-    const midtermWeight = Number(subject?.midtermWeight ?? 30);
-    const finalWeight = Number(subject?.finalWeight ?? 60);
-    if (attendanceWeight + midtermWeight + finalWeight !== 100) {
-      throw new Error('Trọng số điểm của môn học phải bằng 100%.');
+    const kt1Weight = Number(subject?.kt1Weight ?? 10);
+    const kt2Weight = Number(subject?.kt2Weight ?? 15);
+    const kt3Weight = Number(subject?.kt3Weight ?? 15);
+    const examWeight = Number(subject?.examWeight ?? 60);
+    if (kt1Weight + kt2Weight + kt3Weight + examWeight !== 100) {
+      throw new Error('Tổng trọng số KT1, KT2, KT3 và điểm thi phải bằng 100%.');
     }
     const total = Number(
-      ((attendance * attendanceWeight + midterm * midtermWeight + final * finalWeight) / 100).toFixed(2),
+      ((kt1 * kt1Weight + kt2 * kt2Weight + kt3 * kt3Weight + exam * examWeight) / 100).toFixed(2),
     );
     request.body = {
       ...candidate,
-      attendance,
-      midterm,
-      final,
+      kt1,
+      kt2,
+      kt3,
+      exam,
       total,
       letter: total >= 8.5 ? 'A' : total >= 7 ? 'B' : total >= 5.5 ? 'C' : total >= 4 ? 'D' : 'F',
       classification:

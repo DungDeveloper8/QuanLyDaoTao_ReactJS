@@ -220,10 +220,11 @@
       "theoryHours": 30,
       "practiceHours": 30,
       "prerequisiteIds": [],
-      "attendanceWeight": 10,
-      "midtermWeight": 30,
-      "finalWeight": 60,
-      "maxAbsenceRate": 20
+      "maxAbsenceRate": 20,
+      "kt1Weight": 10,
+      "kt2Weight": 15,
+      "kt3Weight": 15,
+      "examWeight": 60
     },
     {
       "id": 3,
@@ -235,10 +236,11 @@
       "prerequisiteIds": [
         2
       ],
-      "attendanceWeight": 10,
-      "midtermWeight": 30,
-      "finalWeight": 60,
-      "maxAbsenceRate": 20
+      "maxAbsenceRate": 20,
+      "kt1Weight": 10,
+      "kt2Weight": 15,
+      "kt3Weight": 15,
+      "examWeight": 60
     },
     {
       "id": 4,
@@ -250,10 +252,11 @@
       "prerequisiteIds": [
         3
       ],
-      "attendanceWeight": 10,
-      "midtermWeight": 30,
-      "finalWeight": 60,
-      "maxAbsenceRate": 20
+      "maxAbsenceRate": 20,
+      "kt1Weight": 10,
+      "kt2Weight": 15,
+      "kt3Weight": 15,
+      "examWeight": 60
     }
   ],
   "curricula": [
@@ -460,100 +463,109 @@
       "id": 1,
       "studentId": 1,
       "courseSectionId": 101,
-      "attendance": 9,
-      "midterm": 8,
-      "final": 8,
       "total": 8.1,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 9,
+      "kt2": 8,
+      "kt3": 8,
+      "exam": 8
     },
     {
       "id": 2,
       "studentId": 1,
       "courseSectionId": 102,
-      "attendance": 9,
-      "midterm": 8,
-      "final": 8.5,
       "total": 8.4,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 9,
+      "kt2": 8,
+      "kt3": 8,
+      "exam": 8.5
     },
     {
       "id": 3,
       "studentId": 2,
       "courseSectionId": 101,
-      "attendance": 8,
-      "midterm": 7,
-      "final": 7.5,
       "total": 7.4,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 8,
+      "kt2": 7,
+      "kt3": 7,
+      "exam": 7.5
     },
     {
       "id": 4,
       "studentId": 2,
       "courseSectionId": 102,
-      "attendance": 8,
-      "midterm": 7.5,
-      "final": 7,
       "total": 7.25,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 8,
+      "kt2": 7.5,
+      "kt3": 7.5,
+      "exam": 7
     },
     {
       "id": 5,
       "studentId": 3,
       "courseSectionId": 101,
-      "attendance": 9,
-      "midterm": 8.5,
-      "final": 8,
       "total": 8.25,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 9,
+      "kt2": 8.5,
+      "kt3": 8.5,
+      "exam": 8
     },
     {
       "id": 6,
       "studentId": 3,
       "courseSectionId": 102,
-      "attendance": 8.5,
-      "midterm": 8,
-      "final": 7.5,
       "total": 7.75,
       "letter": "B",
-      "classification": "Khá"
+      "classification": "Khá",
+      "kt1": 8.5,
+      "kt2": 8,
+      "kt3": 8,
+      "exam": 7.5
     },
     {
       "studentId": 1,
       "courseSectionId": 201,
-      "attendance": 10,
-      "midterm": 10,
-      "final": 10,
       "total": 10.0,
       "letter": "A",
       "classification": "Giỏi",
-      "id": 7
+      "id": 7,
+      "kt1": 10,
+      "kt2": 10,
+      "kt3": 10,
+      "exam": 10
     },
     {
       "studentId": 2,
       "courseSectionId": 201,
-      "attendance": 3,
-      "midterm": 3,
-      "final": 3,
       "total": 3.0,
       "letter": "F",
       "classification": "Kém",
-      "id": 8
+      "id": 8,
+      "kt1": 3,
+      "kt2": 3,
+      "kt3": 3,
+      "exam": 3
     },
     {
       "studentId": 3,
       "courseSectionId": 201,
-      "attendance": 2,
-      "midterm": 2,
-      "final": 3,
       "total": 2.6,
       "letter": "F",
       "classification": "Kém",
-      "id": 9
+      "id": 9,
+      "kt1": 2,
+      "kt2": 2,
+      "kt3": 2,
+      "exam": 3
     }
   ],
   "announcements": [

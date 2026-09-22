@@ -10,6 +10,7 @@ import StudentGradesPage from '../features/StudentGradesPage.jsx';
 import StudentRegistrationPage from '../features/StudentRegistrationPage.jsx';
 import AdminDashboardPage from '../features/AdminDashboardPage.jsx';
 import ReportsPage from '../features/ReportsPage.jsx';
+import GradebooksPage from '../features/GradebooksPage.jsx';
 import StudentsPage from '../features/StudentsPage.jsx';
 import SubjectsCurriculaPage from '../features/SubjectsCurriculaPage.jsx';
 import CourseSectionsPage from '../features/CourseSectionsPage.jsx';
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="subjects" element={<SubjectsCurriculaPage />} />
           <Route path="course-sections" element={<CourseSectionsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="gradebooks" element={<GradebooksPage />} />
         </Route>
       </Route>
 

@@ -81,18 +81,20 @@ export function attendanceSummary(
 }
 
 export function calculateTotalScore(score, subject) {
-  const attendance = Number(score?.attendance ?? 0);
-  const midterm = Number(score?.midterm ?? 0);
-  const final = Number(score?.final ?? 0);
-  const attendanceWeight = Number(subject?.attendanceWeight ?? 10);
-  const midtermWeight = Number(subject?.midtermWeight ?? 30);
-  const finalWeight = Number(subject?.finalWeight ?? 60);
+  const kt1 = Number(score?.kt1 ?? 0);
+  const kt2 = Number(score?.kt2 ?? 0);
+  const kt3 = Number(score?.kt3 ?? 0);
+  const exam = Number(score?.exam ?? 0);
+  const kt1Weight = Number(subject?.kt1Weight ?? 10);
+  const kt2Weight = Number(subject?.kt2Weight ?? 15);
+  const kt3Weight = Number(subject?.kt3Weight ?? 15);
+  const examWeight = Number(subject?.examWeight ?? 60);
 
-  if (attendanceWeight + midtermWeight + finalWeight !== 100) return null;
+  if (kt1Weight + kt2Weight + kt3Weight + examWeight !== 100) return null;
 
   return Number(
     (
-      (attendance * attendanceWeight + midterm * midtermWeight + final * finalWeight) /
+      (kt1 * kt1Weight + kt2 * kt2Weight + kt3 * kt3Weight + exam * examWeight) /
       100
     ).toFixed(2),
   );

@@ -21,9 +21,10 @@ const SUBJECT_EXCEL_COLUMNS = [
   { label: 'Giờ lý thuyết', value: 'theoryHours', type: 'Number', width: 90 },
   { label: 'Giờ thực hành', value: 'practiceHours', type: 'Number', width: 90 },
   { label: 'Môn tiên quyết', value: 'prerequisites', width: 130 },
-  { label: 'Điểm chuyên cần (%)', value: 'attendanceWeight', type: 'Number', width: 105 },
-  { label: 'Điểm giữa kỳ (%)', value: 'midtermWeight', type: 'Number', width: 100 },
-  { label: 'Điểm cuối kỳ (%)', value: 'finalWeight', type: 'Number', width: 100 },
+  { label: 'KT1 (%)', value: 'kt1Weight', type: 'Number', width: 80 },
+  { label: 'KT2 (%)', value: 'kt2Weight', type: 'Number', width: 80 },
+  { label: 'KT3 (%)', value: 'kt3Weight', type: 'Number', width: 80 },
+  { label: 'Điểm thi (%)', value: 'examWeight', type: 'Number', width: 90 },
   { label: 'Vắng tối đa (%)', value: 'maxAbsenceRate', type: 'Number', width: 100 },
 ]
 
@@ -34,9 +35,10 @@ const SUBJECT_EXCEL_HEADERS = {
   theoryHours: ['Giờ lý thuyết', 'Gio ly thuyet', 'theoryHours'],
   practiceHours: ['Giờ thực hành', 'Gio thuc hanh', 'practiceHours'],
   prerequisites: ['Môn tiên quyết', 'Mon tien quyet', 'prerequisites'],
-  attendanceWeight: ['Điểm chuyên cần (%)', 'Diem chuyen can (%)', 'attendanceWeight'],
-  midtermWeight: ['Điểm giữa kỳ (%)', 'Diem giua ky (%)', 'midtermWeight'],
-  finalWeight: ['Điểm cuối kỳ (%)', 'Diem cuoi ky (%)', 'finalWeight'],
+  kt1Weight: ['KT1 (%)', 'kt1Weight'],
+  kt2Weight: ['KT2 (%)', 'kt2Weight'],
+  kt3Weight: ['KT3 (%)', 'kt3Weight'],
+  examWeight: ['Điểm thi (%)', 'Diem thi (%)', 'examWeight'],
   maxAbsenceRate: ['Vắng tối đa (%)', 'Vang toi da (%)', 'maxAbsenceRate'],
 }
 
@@ -54,9 +56,10 @@ const emptySubject = {
   theoryHours: 30,
   practiceHours: 15,
   prerequisiteIds: [],
-  attendanceWeight: 10,
-  midtermWeight: 30,
-  finalWeight: 60,
+  kt1Weight: 10,
+  kt2Weight: 15,
+  kt3Weight: 15,
+  examWeight: 60,
   maxAbsenceRate: 20,
 }
 
@@ -173,8 +176,8 @@ export default function SubjectsCurriculaPage() {
       return 'Số giờ lý thuyết/thực hành không được âm.'
     }
 
-    if (payload.attendanceWeight + payload.midtermWeight + payload.finalWeight !== 100) {
-      return 'Tổng trọng số điểm phải bằng 100%.'
+    if (payload.kt1Weight + payload.kt2Weight + payload.kt3Weight + payload.examWeight !== 100) {
+      return 'Tổng trọng số KT1, KT2, KT3 và điểm thi phải bằng 100%.'
     }
 
     if (payload.maxAbsenceRate < 0 || payload.maxAbsenceRate > 100) {
@@ -258,9 +261,10 @@ export default function SubjectsCurriculaPage() {
         theoryHours: Number(form.theoryHours),
         practiceHours: Number(form.practiceHours),
         prerequisiteIds: (form.prerequisiteIds || []).map(Number),
-        attendanceWeight: Number(form.attendanceWeight),
-        midtermWeight: Number(form.midtermWeight),
-        finalWeight: Number(form.finalWeight),
+        kt1Weight: Number(form.kt1Weight),
+        kt2Weight: Number(form.kt2Weight),
+        kt3Weight: Number(form.kt3Weight),
+        examWeight: Number(form.examWeight),
         maxAbsenceRate: Number(form.maxAbsenceRate),
       }
     }
@@ -349,9 +353,10 @@ export default function SubjectsCurriculaPage() {
         credits: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.credits, fallback.credits),
         theoryHours: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.theoryHours, fallback.theoryHours),
         practiceHours: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.practiceHours, fallback.practiceHours),
-        attendanceWeight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.attendanceWeight, fallback.attendanceWeight),
-        midtermWeight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.midtermWeight, fallback.midtermWeight),
-        finalWeight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.finalWeight, fallback.finalWeight),
+        kt1Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt1Weight, fallback.kt1Weight),
+        kt2Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt2Weight, fallback.kt2Weight),
+        kt3Weight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.kt3Weight, fallback.kt3Weight),
+        examWeight: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.examWeight, fallback.examWeight),
         maxAbsenceRate: getExcelNumber(row, SUBJECT_EXCEL_HEADERS.maxAbsenceRate, fallback.maxAbsenceRate),
         prerequisiteCodes: prerequisiteCodes(getExcelValue(row, SUBJECT_EXCEL_HEADERS.prerequisites)),
         prerequisiteIds: [],
@@ -361,9 +366,10 @@ export default function SubjectsCurriculaPage() {
         candidate.credits,
         candidate.theoryHours,
         candidate.practiceHours,
-        candidate.attendanceWeight,
-        candidate.midtermWeight,
-        candidate.finalWeight,
+        candidate.kt1Weight,
+        candidate.kt2Weight,
+        candidate.kt3Weight,
+        candidate.examWeight,
         candidate.maxAbsenceRate,
       ]
       if (numericValues.some((value) => !Number.isFinite(value))) {
@@ -372,8 +378,8 @@ export default function SubjectsCurriculaPage() {
       if (candidate.credits <= 0 || candidate.theoryHours < 0 || candidate.practiceHours < 0) {
         throw new Error(`Dòng ${rowNumber}: tín chỉ/giờ học không hợp lệ.`)
       }
-      if (candidate.attendanceWeight + candidate.midtermWeight + candidate.finalWeight !== 100) {
-        throw new Error(`Dòng ${rowNumber}: tổng trọng số điểm phải bằng 100%.`)
+      if (candidate.kt1Weight + candidate.kt2Weight + candidate.kt3Weight + candidate.examWeight !== 100) {
+        throw new Error(`Dòng ${rowNumber}: tổng trọng số KT1, KT2, KT3 và điểm thi phải bằng 100%.`)
       }
       if (candidate.maxAbsenceRate < 0 || candidate.maxAbsenceRate > 100) {
         throw new Error(`Dòng ${rowNumber}: vắng tối đa phải trong khoảng 0–100%.`)
@@ -430,9 +436,10 @@ export default function SubjectsCurriculaPage() {
           theoryHours: candidate.theoryHours,
           practiceHours: candidate.practiceHours,
           prerequisiteIds: [],
-          attendanceWeight: candidate.attendanceWeight,
-          midtermWeight: candidate.midtermWeight,
-          finalWeight: candidate.finalWeight,
+          kt1Weight: candidate.kt1Weight,
+          kt2Weight: candidate.kt2Weight,
+          kt3Weight: candidate.kt3Weight,
+          examWeight: candidate.examWeight,
           maxAbsenceRate: candidate.maxAbsenceRate,
         })
         realIdByCode.set(candidate.code, Number(response.data.id))
@@ -449,9 +456,10 @@ export default function SubjectsCurriculaPage() {
           theoryHours: candidate.theoryHours,
           practiceHours: candidate.practiceHours,
           prerequisiteIds: resolvedPrerequisites,
-          attendanceWeight: candidate.attendanceWeight,
-          midtermWeight: candidate.midtermWeight,
-          finalWeight: candidate.finalWeight,
+          kt1Weight: candidate.kt1Weight,
+          kt2Weight: candidate.kt2Weight,
+          kt3Weight: candidate.kt3Weight,
+          examWeight: candidate.examWeight,
           maxAbsenceRate: candidate.maxAbsenceRate,
         }
         await updateOne('subjects', realId, payload)
@@ -523,9 +531,10 @@ export default function SubjectsCurriculaPage() {
                     theoryHours: 30,
                     practiceHours: 30,
                     prerequisites: 'WEB101',
-                    attendanceWeight: 10,
-                    midtermWeight: 30,
-                    finalWeight: 60,
+                    kt1Weight: 10,
+                    kt2Weight: 15,
+                    kt3Weight: 15,
+                    examWeight: 60,
                     maxAbsenceRate: 20,
                   }]}
                   columns={SUBJECT_EXCEL_COLUMNS}
@@ -651,7 +660,7 @@ export default function SubjectsCurriculaPage() {
                     <td>{item.theoryHours}/{item.practiceHours}</td>
                     <td>{prerequisiteCodes || '—'}</td>
                     <td>
-                      {item.attendanceWeight}/{item.midtermWeight}/{item.finalWeight}
+                      {item.kt1Weight}/{item.kt2Weight}/{item.kt3Weight}/{item.examWeight}
                     </td>
                     <td>{item.maxAbsenceRate}%</td>
                     <td className="action-cell">
@@ -796,33 +805,43 @@ export default function SubjectsCurriculaPage() {
               />
             </label>
             <label>
-              Điểm chuyên cần (%)
+              KT1 (%)
               <input
                 type="number"
                 min="0"
                 max="100"
-                value={form.attendanceWeight}
-                onChange={(event) => setForm({ ...form, attendanceWeight: event.target.value })}
+                value={form.kt1Weight}
+                onChange={(event) => setForm({ ...form, kt1Weight: event.target.value })}
               />
             </label>
             <label>
-              Điểm giữa kỳ (%)
+              KT2 (%)
               <input
                 type="number"
                 min="0"
                 max="100"
-                value={form.midtermWeight}
-                onChange={(event) => setForm({ ...form, midtermWeight: event.target.value })}
+                value={form.kt2Weight}
+                onChange={(event) => setForm({ ...form, kt2Weight: event.target.value })}
               />
             </label>
             <label>
-              Điểm cuối kỳ (%)
+              KT3 (%)
               <input
                 type="number"
                 min="0"
                 max="100"
-                value={form.finalWeight}
-                onChange={(event) => setForm({ ...form, finalWeight: event.target.value })}
+                value={form.kt3Weight}
+                onChange={(event) => setForm({ ...form, kt3Weight: event.target.value })}
+              />
+            </label>
+            <label>
+              Điểm thi (%)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={form.examWeight}
+                onChange={(event) => setForm({ ...form, examWeight: event.target.value })}
               />
             </label>
 

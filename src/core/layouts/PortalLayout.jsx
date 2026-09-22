@@ -12,6 +12,7 @@ const menus = {
     { label: 'Môn học & CTĐT', to: '/admin/subjects', icon: 'book' },
     { label: 'Giảng dạy & TKB', to: '/admin/course-sections', icon: 'calendar' },
     { label: 'Báo cáo & Excel', to: '/admin/reports', icon: 'report' },
+    { label: 'Bảng điểm tổng hợp', to: '/admin/gradebooks', icon: 'score' },
   ],
   lecturer: [
     { label: 'Lịch dạy', to: '/lecturer/schedule', icon: 'clock' },

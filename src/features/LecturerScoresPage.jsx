@@ -13,33 +13,51 @@ import {
 } from '../shared/utils/trainingRules.js';
 import { getExcelNumber, getExcelValue } from '../shared/utils/exportExcel.js';
 
-const SCORE_FIELDS = ['attendance', 'midterm', 'final'];
+const SCORE_FIELDS = ['kt1', 'kt2', 'kt3', 'exam'];
 
 const SCORE_EXCEL_COLUMNS = [
   { label: 'Mã sinh viên', value: 'studentCode', width: 95 },
   { label: 'Họ và tên', value: 'fullName', width: 170 },
   { label: 'Mã lớp học phần', value: 'sectionCode', width: 145 },
-  { label: 'Chuyên cần', value: 'attendance', type: 'Number', width: 90 },
-  { label: 'Giữa kỳ', value: 'midterm', type: 'Number', width: 85 },
-  { label: 'Cuối kỳ', value: 'final', type: 'Number', width: 85 },
+  { label: 'KT1', value: 'kt1', type: 'Number', width: 70 },
+  { label: 'KT2', value: 'kt2', type: 'Number', width: 70 },
+  { label: 'KT3', value: 'kt3', type: 'Number', width: 70 },
+  { label: 'Điểm thi', value: 'exam', type: 'Number', width: 80 },
   { label: 'Tổng kết', value: 'total', type: 'Number', width: 85 },
   { label: 'Điểm chữ', value: 'letter', width: 75 },
   { label: 'Xếp loại', value: 'classification', width: 90 },
-]
+];
 
 const SCORE_EXCEL_HEADERS = {
   studentCode: ['Mã sinh viên', 'Mã SV', 'studentCode'],
   sectionCode: ['Mã lớp học phần', 'Mã lớp HP', 'sectionCode'],
-  attendance: ['Chuyên cần', 'Điểm chuyên cần', 'attendance'],
-  midterm: ['Giữa kỳ', 'Điểm giữa kỳ', 'midterm'],
-  final: ['Cuối kỳ', 'Điểm cuối kỳ', 'final'],
+  kt1: ['KT1', 'Điểm KT1', 'kt1'],
+  kt2: ['KT2', 'Điểm KT2', 'kt2'],
+  kt3: ['KT3', 'Điểm KT3', 'kt3'],
+  exam: ['Điểm thi', 'Thi', 'exam'],
 };
+
+function scorePayload(studentId, sectionId, draft, subject) {
+  const total = calculateTotalScore(draft, subject);
+  return {
+    studentId: Number(studentId),
+    courseSectionId: Number(sectionId),
+    kt1: Number(draft.kt1),
+    kt2: Number(draft.kt2),
+    kt3: Number(draft.kt3),
+    exam: Number(draft.exam),
+    total,
+    letter: letterGrade(total),
+    classification: scoreClassification(total),
+  };
+}
 
 export default function LecturerScoresPage() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [semesterId, setSemesterId] = useState('');
   const [sectionId, setSectionId] = useState('');
   const [drafts, setDrafts] = useState({});
   const [message, setMessage] = useState('');
@@ -53,14 +71,24 @@ export default function LecturerScoresPage() {
     try {
       const nextData = await getAllData();
       const activeSemester = nextData.semesters.find((item) => item.active);
+      const nextSemesterId = semesterId || String(activeSemester?.id || '');
       const firstSection = nextData.courseSections.find(
         (item) =>
           Number(item.lecturerId) === Number(user.lecturerId) &&
-          Number(item.semesterId) === Number(activeSemester?.id),
+          Number(item.semesterId) === Number(nextSemesterId),
       );
 
       setData(nextData);
-      setSectionId((current) => current || (firstSection ? String(firstSection.id) : ''));
+      setSemesterId(nextSemesterId);
+      setSectionId((current) => {
+        const stillValid = nextData.courseSections.some(
+          (item) =>
+            String(item.id) === String(current) &&
+            Number(item.lecturerId) === Number(user.lecturerId) &&
+            Number(item.semesterId) === Number(nextSemesterId),
+        );
+        return stillValid ? current : firstSection ? String(firstSection.id) : '';
+      });
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -73,17 +101,19 @@ export default function LecturerScoresPage() {
   }, []);
 
   const sections = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    const activeSemester = data.semesters.find((item) => item.active);
+    if (!data || !semesterId) return [];
     return data.courseSections.filter(
       (item) =>
         Number(item.lecturerId) === Number(user.lecturerId) &&
-        Number(item.semesterId) === Number(activeSemester?.id),
+        Number(item.semesterId) === Number(semesterId),
     );
-  }, [data, user.lecturerId]);
+  }, [data, semesterId, user.lecturerId]);
+
+  useEffect(() => {
+    if (!sections.some((item) => String(item.id) === String(sectionId))) {
+      setSectionId(sections[0] ? String(sections[0].id) : '');
+    }
+  }, [sections, sectionId]);
 
   const section = useMemo(
     () => data?.courseSections.find((item) => Number(item.id) === Number(sectionId)),
@@ -96,9 +126,7 @@ export default function LecturerScoresPage() {
   );
 
   const students = useMemo(() => {
-    if (!data || !sectionId) {
-      return [];
-    }
+    if (!data || !sectionId) return [];
 
     const studentIds = new Set(
       data.registrations
@@ -110,7 +138,9 @@ export default function LecturerScoresPage() {
         .map((item) => Number(item.studentId)),
     );
 
-    return data.students.filter((item) => studentIds.has(Number(item.id)));
+    return data.students
+      .filter((item) => studentIds.has(Number(item.id)))
+      .sort((a, b) => a.code.localeCompare(b.code, 'vi'));
   }, [data, sectionId]);
 
   useEffect(() => {
@@ -128,9 +158,10 @@ export default function LecturerScoresPage() {
       );
 
       nextDrafts[student.id] = {
-        attendance: score?.attendance ?? '',
-        midterm: score?.midterm ?? '',
-        final: score?.final ?? '',
+        kt1: score?.kt1 ?? '',
+        kt2: score?.kt2 ?? '',
+        kt3: score?.kt3 ?? '',
+        exam: score?.exam ?? '',
       };
     });
 
@@ -164,12 +195,15 @@ export default function LecturerScoresPage() {
       const sectionCode = String(getExcelValue(row, SCORE_EXCEL_HEADERS.sectionCode) || '')
         .trim()
         .toUpperCase();
-      const attendance = getExcelNumber(row, SCORE_EXCEL_HEADERS.attendance);
-      const midterm = getExcelNumber(row, SCORE_EXCEL_HEADERS.midterm);
-      const final = getExcelNumber(row, SCORE_EXCEL_HEADERS.final);
+      const kt1 = getExcelNumber(row, SCORE_EXCEL_HEADERS.kt1);
+      const kt2 = getExcelNumber(row, SCORE_EXCEL_HEADERS.kt2);
+      const kt3 = getExcelNumber(row, SCORE_EXCEL_HEADERS.kt3);
+      const exam = getExcelNumber(row, SCORE_EXCEL_HEADERS.exam);
 
       if (!studentCode) throw new Error(`Dòng ${rowNumber}: thiếu mã sinh viên.`);
-      if (seenCodes.has(studentCode)) throw new Error(`Dòng ${rowNumber}: mã ${studentCode} bị lặp trong tệp.`);
+      if (seenCodes.has(studentCode)) {
+        throw new Error(`Dòng ${rowNumber}: mã ${studentCode} bị lặp trong tệp.`);
+      }
       seenCodes.add(studentCode);
 
       const student = studentByCode.get(studentCode);
@@ -180,34 +214,24 @@ export default function LecturerScoresPage() {
         throw new Error(`Dòng ${rowNumber}: mã lớp học phần phải là ${section.code}.`);
       }
 
-      for (const [label, value] of [['Chuyên cần', attendance], ['Giữa kỳ', midterm], ['Cuối kỳ', final]]) {
+      for (const [label, value] of [['KT1', kt1], ['KT2', kt2], ['KT3', kt3], ['Điểm thi', exam]]) {
         if (!Number.isFinite(value) || value < 0 || value > 10) {
-          throw new Error(`Dòng ${rowNumber}: điểm ${label} phải từ 0 đến 10.`);
+          throw new Error(`Dòng ${rowNumber}: ${label} phải từ 0 đến 10.`);
         }
       }
 
-      return { student, attendance, midterm, final };
+      return { student, kt1, kt2, kt3, exam };
     });
 
     setImporting(true);
     try {
       for (const candidate of candidates) {
-        const total = calculateTotalScore(candidate, subject);
         const existing = data.scores.find(
           (item) =>
             Number(item.studentId) === Number(candidate.student.id) &&
             Number(item.courseSectionId) === Number(section.id),
         );
-        const payload = {
-          studentId: candidate.student.id,
-          courseSectionId: Number(section.id),
-          attendance: candidate.attendance,
-          midterm: candidate.midterm,
-          final: candidate.final,
-          total,
-          letter: letterGrade(total),
-          classification: scoreClassification(total),
-        };
+        const payload = scorePayload(candidate.student.id, section.id, candidate, subject);
 
         if (existing) {
           await updateOne('scores', existing.id, { ...existing, ...payload });
@@ -224,10 +248,7 @@ export default function LecturerScoresPage() {
   }
 
   async function handleSaveAll() {
-    if (!subject) {
-      return;
-    }
-
+    if (!subject || !sectionId) return;
     setMessage('');
 
     for (const student of students) {
@@ -235,48 +256,31 @@ export default function LecturerScoresPage() {
       const incomplete = SCORE_FIELDS.some(
         (field) => draft[field] === '' || Number.isNaN(Number(draft[field])),
       );
-
       if (incomplete) {
-        setMessage(`Chưa nhập đủ điểm cho ${student.code}.`);
+        setMessage(`Chưa nhập đủ KT1, KT2, KT3 và điểm thi cho ${student.code}.`);
         return;
       }
     }
 
     setSaving(true);
-
     try {
       const requests = students.map((student) => {
         const draft = drafts[student.id];
-        const total = calculateTotalScore(draft, subject);
         const existing = data.scores.find(
           (item) =>
             Number(item.studentId) === Number(student.id) &&
             Number(item.courseSectionId) === Number(sectionId),
         );
-        const payload = {
-          studentId: student.id,
-          courseSectionId: Number(sectionId),
-          attendance: Number(draft.attendance),
-          midterm: Number(draft.midterm),
-          final: Number(draft.final),
-          total,
-          letter: letterGrade(total),
-          classification: scoreClassification(total),
-        };
+        const payload = scorePayload(student.id, sectionId, draft, subject);
 
-        if (existing) {
-          return updateOne('scores', existing.id, {
-            ...existing,
-            ...payload,
-          });
-        }
-
-        return createOne('scores', payload);
+        return existing
+          ? updateOne('scores', existing.id, { ...existing, ...payload })
+          : createOne('scores', payload);
       });
 
       await Promise.all(requests);
       await load();
-      setMessage('Đã lưu bảng điểm.');
+      setMessage('Đã lưu bảng điểm học phần.');
     } catch (saveError) {
       setMessage(saveError.message);
     } finally {
@@ -284,19 +288,14 @@ export default function LecturerScoresPage() {
     }
   }
 
-  if (loading) {
-    return <LoadingState />;
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={load} />;
-  }
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
 
   return (
     <div>
       <PageHeader
-        title="Nhập điểm & Quản lý điểm"
-        description="Cập nhật điểm theo lớp học phần."
+        title="Nhập điểm & Bảng điểm học phần"
+        description="Nhập KT1, KT2, KT3, điểm thi và xem kết quả theo lớp học phần."
         actions={(
           <div className="page-actions">
             <ExcelExportButton
@@ -306,27 +305,25 @@ export default function LecturerScoresPage() {
                 studentCode: student.code,
                 fullName: student.fullName,
                 sectionCode: section?.code || '',
-                attendance: drafts[student.id]?.attendance ?? '',
-                midterm: drafts[student.id]?.midterm ?? '',
-                final: drafts[student.id]?.final ?? '',
-                total: '',
-                letter: '',
-                classification: '',
+                kt1: drafts[student.id]?.kt1 ?? '',
+                kt2: drafts[student.id]?.kt2 ?? '',
+                kt3: drafts[student.id]?.kt3 ?? '',
+                exam: drafts[student.id]?.exam ?? '',
               }))}
-              columns={SCORE_EXCEL_COLUMNS.slice(0, 6)}
+              columns={SCORE_EXCEL_COLUMNS.slice(0, 7)}
             >
               Tải mẫu điểm
             </ExcelExportButton>
             <ExcelImportButton
               onImport={importScores}
               disabled={!sectionId || importing || saving}
-              title="Nhập điểm chuyên cần, giữa kỳ, cuối kỳ theo mã sinh viên và tự lưu vào API"
+              title="Nhập KT1, KT2, KT3 và điểm thi theo mã sinh viên"
             >
               {importing ? 'Đang nhập...' : 'Nhập điểm Excel'}
             </ExcelImportButton>
             <ExcelExportButton
-              fileName={`bang-diem-${section?.code || 'lop-hoc-phan'}.xls`}
-              sheetName="Bang diem"
+              fileName={`bang-diem-hoc-phan-${section?.code || 'lop-hoc-phan'}.xls`}
+              sheetName="Bang diem hoc phan"
               rows={students.map((student) => {
                 const draft = drafts[student.id] || {};
                 const complete = SCORE_FIELDS.every((field) => draft[field] !== '' && draft[field] != null);
@@ -335,9 +332,10 @@ export default function LecturerScoresPage() {
                   studentCode: student.code,
                   fullName: student.fullName,
                   sectionCode: section?.code || '',
-                  attendance: draft.attendance ?? '',
-                  midterm: draft.midterm ?? '',
-                  final: draft.final ?? '',
+                  kt1: draft.kt1 ?? '',
+                  kt2: draft.kt2 ?? '',
+                  kt3: draft.kt3 ?? '',
+                  exam: draft.exam ?? '',
                   total,
                   letter: total === '' ? '' : letterGrade(total),
                   classification: total === '' ? '' : scoreClassification(total),
@@ -358,25 +356,35 @@ export default function LecturerScoresPage() {
       />
 
       <div className="filter-bar">
-        <select value={sectionId} onChange={(event) => setSectionId(event.target.value)}>
-          <option value="">-- Chọn lớp học phần --</option>
-          {sections.map((item) => {
-            const itemSubject = data.subjects.find(
-              (subjectItem) => Number(subjectItem.id) === Number(item.subjectId),
-            );
-
-            return (
+        <label className="filter-field">
+          <span>Học kỳ</span>
+          <select value={semesterId} onChange={(event) => setSemesterId(event.target.value)}>
+            {data.semesters.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.code} - {itemSubject?.name}
+                {item.name} - {item.academicYear}
               </option>
-            );
-          })}
-        </select>
-
+            ))}
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Lớp học phần</span>
+          <select value={sectionId} onChange={(event) => setSectionId(event.target.value)}>
+            <option value="">-- Chọn lớp học phần --</option>
+            {sections.map((item) => {
+              const itemSubject = data.subjects.find(
+                (subjectItem) => Number(subjectItem.id) === Number(item.subjectId),
+              );
+              return (
+                <option key={item.id} value={item.id}>
+                  {item.code} - {itemSubject?.name}
+                </option>
+              );
+            })}
+          </select>
+        </label>
         {subject ? (
           <span className="filter-note">
-            Trọng số: CC {subject.attendanceWeight}% · GK {subject.midtermWeight}% · CK{' '}
-            {subject.finalWeight}%
+            Trọng số: KT1 {subject.kt1Weight}% · KT2 {subject.kt2Weight}% · KT3 {subject.kt3Weight}% · Thi {subject.examWeight}%
           </span>
         ) : null}
       </div>
@@ -388,9 +396,10 @@ export default function LecturerScoresPage() {
           <thead>
             <tr>
               <th>Sinh viên</th>
-              <th>Chuyên cần</th>
-              <th>Giữa kỳ</th>
-              <th>Cuối kỳ</th>
+              <th>KT1</th>
+              <th>KT2</th>
+              <th>KT3</th>
+              <th>Điểm thi</th>
               <th>Tổng kết</th>
               <th>Xếp loại</th>
               <th>Điều kiện thi</th>
@@ -431,14 +440,8 @@ export default function LecturerScoresPage() {
                       />
                     </td>
                   ))}
-                  <td>
-                    <strong>{total ?? '—'}</strong>
-                  </td>
-                  <td>
-                    {total == null
-                      ? '—'
-                      : `${letterGrade(total)} · ${scoreClassification(total)}`}
-                  </td>
+                  <td><strong>{total ?? '—'}</strong></td>
+                  <td>{total == null ? '—' : `${letterGrade(total)} · ${scoreClassification(total)}`}</td>
                   <td>
                     <StatusBadge tone={summary.eligible ? 'success' : 'danger'}>
                       {summary.eligible ? 'Đủ ĐK' : 'Không đủ ĐK'}
@@ -447,12 +450,9 @@ export default function LecturerScoresPage() {
                 </tr>
               );
             })}
-
             {!students.length ? (
               <tr>
-                <td colSpan="7" className="table-empty">
-                  Chưa có sinh viên đăng ký.
-                </td>
+                <td colSpan="8" className="table-empty">Chưa có sinh viên đăng ký.</td>
               </tr>
             ) : null}
           </tbody>
