@@ -1,68 +1,79 @@
-import { useEffect, useMemo, useState } from 'react';
-import useAuth from '../core/auth/useAuth.js';
-import { createOne, getAllData, updateOne } from '../core/api/apiClient.js';
-import { ErrorState, LoadingState } from '../shared/components/DataState.jsx';
-import PageHeader from '../shared/components/PageHeader.jsx';
-import StatusBadge from '../shared/components/StatusBadge.jsx';
+import { useEffect, useMemo, useState } from "react";
+import useAuth from "../core/auth/useAuth.js";
+import { createOne, getAllData, updateOne } from "../core/api/apiClient.js";
+import { ErrorState, LoadingState } from "../shared/components/DataState.jsx";
+import PageHeader from "../shared/components/PageHeader.jsx";
+import StatusBadge from "../shared/components/StatusBadge.jsx";
 import {
   buildMonthCells,
   monthLabel,
   moveMonth,
   scheduledDatesInMonth,
   toDateKey,
-} from '../shared/utils/schedule.js';
-import { attendanceSummary } from '../shared/utils/trainingRules.js';
+} from "../shared/utils/schedule.js";
+import { attendanceSummary } from "../shared/utils/trainingRules.js";
 
-const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const TODAY = toDateKey(new Date());
 
-function normalizeAttendanceRecord({ sessionId, studentId, draft, maxPeriods }) {
-  const status = draft?.status === 'absent' ? 'absent' : 'present';
+function normalizeAttendanceRecord({
+  sessionId,
+  studentId,
+  draft,
+  maxPeriods,
+}) {
+  const status = draft?.status === "absent" ? "absent" : "present";
 
   return {
     sessionId: Number(sessionId),
     studentId: Number(studentId),
     status,
     absentPeriods:
-      status === 'absent'
+      status === "absent"
         ? Math.min(maxPeriods, Math.max(1, Number(draft?.absentPeriods || 1)))
         : 0,
-    note: '',
+    note: "",
   };
 }
 
 async function saveAttendanceSheet({ data, section, date, students, drafts }) {
   let session = data.attendanceSessions.find(
-    (item) => Number(item.courseSectionId) === Number(section.id) && item.date === date,
+    (item) =>
+      Number(item.courseSectionId) === Number(section.id) && item.date === date,
   );
 
   if (!session) {
-    const response = await createOne('attendanceSessions', {
+    const response = await createOne("attendanceSessions", {
       courseSectionId: Number(section.id),
       date,
-      topic: 'Nội dung học theo kế hoạch',
+      topic: "Nội dung học theo kế hoạch",
       periods: Number(section.periodsPerSession || 3),
     });
     session = response.data;
   }
 
-  await Promise.all(students.map((student) => {
-    const payload = normalizeAttendanceRecord({
-      sessionId: session.id,
-      studentId: student.id,
-      draft: drafts[student.id],
-      maxPeriods: Number(session.periods || section.periodsPerSession || 3),
-    });
-    const existing = data.attendanceRecords.find(
-      (item) =>
-        Number(item.sessionId) === Number(session.id) &&
-        Number(item.studentId) === Number(student.id),
-    );
+  await Promise.all(
+    students.map((student) => {
+      const payload = normalizeAttendanceRecord({
+        sessionId: session.id,
+        studentId: student.id,
+        draft: drafts[student.id],
+        maxPeriods: Number(session.periods || section.periodsPerSession || 3),
+      });
+      const existing = data.attendanceRecords.find(
+        (item) =>
+          Number(item.sessionId) === Number(session.id) &&
+          Number(item.studentId) === Number(student.id),
+      );
 
-    return existing
-      ? updateOne('attendanceRecords', existing.id, { ...existing, ...payload })
-      : createOne('attendanceRecords', payload);
-  }));
+      return existing
+        ? updateOne("attendanceRecords", existing.id, {
+            ...existing,
+            ...payload,
+          })
+        : createOne("attendanceRecords", payload);
+    }),
+  );
 
   return session;
 }
@@ -72,7 +83,7 @@ function createDefaultDrafts(students) {
     students.map((student) => [
       student.id,
       {
-        status: 'present',
+        status: "present",
         absentPeriods: 0,
       },
     ]),
@@ -91,17 +102,17 @@ export default function LecturerAttendancePage() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sectionId, setSectionId] = useState('');
+  const [error, setError] = useState("");
+  const [sectionId, setSectionId] = useState("");
   const [monthDate, setMonthDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState("");
   const [drafts, setDrafts] = useState({});
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function load() {
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const nextData = await getAllData();
@@ -113,7 +124,9 @@ export default function LecturerAttendancePage() {
       );
 
       setData(nextData);
-      setSectionId((current) => current || (firstSection ? String(firstSection.id) : ''));
+      setSectionId(
+        (current) => current || (firstSection ? String(firstSection.id) : ""),
+      );
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -143,17 +156,26 @@ export default function LecturerAttendancePage() {
   }, [activeSemester, data, user.lecturerId]);
 
   const section = useMemo(
-    () => data?.courseSections.find((item) => Number(item.id) === Number(sectionId)),
+    () =>
+      data?.courseSections.find(
+        (item) => Number(item.id) === Number(sectionId),
+      ),
     [data, sectionId],
   );
 
   const subject = useMemo(
-    () => data?.subjects.find((item) => Number(item.id) === Number(section?.subjectId)),
+    () =>
+      data?.subjects.find(
+        (item) => Number(item.id) === Number(section?.subjectId),
+      ),
     [data, section],
   );
 
   const classItem = useMemo(
-    () => data?.classes.find((item) => Number(item.id) === Number(section?.classId)),
+    () =>
+      data?.classes.find(
+        (item) => Number(item.id) === Number(section?.classId),
+      ),
     [data, section],
   );
 
@@ -167,7 +189,7 @@ export default function LecturerAttendancePage() {
         .filter(
           (item) =>
             Number(item.courseSectionId) === Number(sectionId) &&
-            item.status === 'registered',
+            item.status === "registered",
         )
         .map((item) => Number(item.studentId)),
     );
@@ -202,10 +224,7 @@ export default function LecturerAttendancePage() {
     [scheduledDates],
   );
 
-  const monthCells = useMemo(
-    () => buildMonthCells(monthDate),
-    [monthDate],
-  );
+  const monthCells = useMemo(() => buildMonthCells(monthDate), [monthDate]);
 
   useEffect(() => {
     if (!activeSemester || semesterContainsToday(activeSemester)) {
@@ -217,12 +236,13 @@ export default function LecturerAttendancePage() {
 
   useEffect(() => {
     if (!scheduledDates.length) {
-      setSelectedDate('');
+      setSelectedDate("");
       return;
     }
 
-    const todayInMonth = scheduledDates.includes(TODAY) ? TODAY : '';
-    const latestPastDate = scheduledDates.filter((date) => date <= TODAY).at(-1) || '';
+    const todayInMonth = scheduledDates.includes(TODAY) ? TODAY : "";
+    const latestPastDate =
+      scheduledDates.filter((date) => date <= TODAY).at(-1) || "";
 
     setSelectedDate((current) => {
       if (scheduledDates.includes(current)) {
@@ -252,7 +272,7 @@ export default function LecturerAttendancePage() {
 
         if (record) {
           nextDrafts[student.id] = {
-            status: record.status === 'absent' ? 'absent' : 'present',
+            status: record.status === "absent" ? "absent" : "present",
             absentPeriods: Number(record.absentPeriods || 0),
           };
         }
@@ -260,7 +280,7 @@ export default function LecturerAttendancePage() {
     }
 
     setDrafts(nextDrafts);
-    setMessage('');
+    setMessage("");
   }, [data, selectedDate, sessionByDate, students]);
 
   function updateDraft(studentId, patch) {
@@ -277,7 +297,7 @@ export default function LecturerAttendancePage() {
     updateDraft(studentId, {
       status,
       absentPeriods:
-        status === 'present'
+        status === "present"
           ? 0
           : Math.max(1, Number(drafts[studentId]?.absentPeriods || 1)),
     });
@@ -301,7 +321,7 @@ export default function LecturerAttendancePage() {
     }
 
     setSaving(true);
-    setMessage('');
+    setMessage("");
 
     try {
       await saveAttendanceSheet({
@@ -313,7 +333,7 @@ export default function LecturerAttendancePage() {
       });
       await load();
       setMessage(
-        `Đã lưu điểm danh ngày ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString('vi-VN')}.`,
+        `Đã lưu điểm danh ngày ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("vi-VN")}.`,
       );
     } catch (saveError) {
       setMessage(saveError.message);
@@ -342,10 +362,12 @@ export default function LecturerAttendancePage() {
           <button
             className="btn btn-primary"
             type="button"
-            disabled={!selectedDate || selectedIsFuture || saving || !students.length}
+            disabled={
+              !selectedDate || selectedIsFuture || saving || !students.length
+            }
             onClick={handleSave}
           >
-            {saving ? 'Đang lưu...' : 'Lưu điểm danh'}
+            {saving ? "Đang lưu..." : "Lưu điểm danh"}
           </button>
         }
       />
@@ -357,13 +379,16 @@ export default function LecturerAttendancePage() {
             value={sectionId}
             onChange={(event) => {
               setSectionId(event.target.value);
-              setMessage('');
+              setMessage("");
             }}
           >
-            {!sections.length ? <option value="">Không có lớp học phần</option> : null}
+            {!sections.length ? (
+              <option value="">Không có lớp học phần</option>
+            ) : null}
             {sections.map((item) => {
               const itemSubject = data.subjects.find(
-                (subjectItem) => Number(subjectItem.id) === Number(item.subjectId),
+                (subjectItem) =>
+                  Number(subjectItem.id) === Number(item.subjectId),
               );
 
               return (
@@ -376,16 +401,18 @@ export default function LecturerAttendancePage() {
         </label>
 
         <div className="attendance-context">
-          <strong>{subject?.name || 'Chưa chọn môn học'}</strong>
+          <strong>{subject?.name || "Chưa chọn môn học"}</strong>
           <span>
-            {classItem?.name || '—'} · Phòng {section?.room || '—'} ·{' '}
+            {classItem?.name || "—"} · Phòng {section?.room || "—"} ·{" "}
             {section?.periodsPerSession || 3} tiết/buổi
           </span>
         </div>
       </div>
 
       {!section ? (
-        <div className="empty-state">Giảng viên chưa được phân công lớp học phần trong học kỳ hiện tại.</div>
+        <div className="empty-state">
+          Giảng viên chưa được phân công lớp học phần trong học kỳ hiện tại.
+        </div>
       ) : (
         <div className="attendance-layout">
           <section className="panel attendance-calendar-panel">
@@ -424,7 +451,10 @@ export default function LecturerAttendancePage() {
               </span>
             </div>
 
-            <div className="month-calendar" aria-label="Lịch điểm danh theo tháng">
+            <div
+              className="month-calendar"
+              aria-label="Lịch điểm danh theo tháng"
+            >
               {WEEKDAYS.map((label) => (
                 <div className="calendar-weekday" key={label}>
                   {label}
@@ -433,36 +463,41 @@ export default function LecturerAttendancePage() {
 
               {monthCells.map((date, index) => {
                 if (!date) {
-                  return <div className="calendar-cell empty" key={`empty-${index}`} />;
+                  return (
+                    <div
+                      className="calendar-cell empty"
+                      key={`empty-${index}`}
+                    />
+                  );
                 }
 
                 const dateKey = toDateKey(date);
                 const isScheduled = scheduledDateSet.has(dateKey);
                 const session = sessionByDate.get(dateKey);
                 const state = !isScheduled
-                  ? 'off'
+                  ? "off"
                   : session
-                    ? 'saved'
+                    ? "saved"
                     : dateKey > TODAY
-                      ? 'future'
-                      : 'pending';
+                      ? "future"
+                      : "pending";
 
                 return (
                   <button
                     key={dateKey}
                     type="button"
                     disabled={!isScheduled}
-                    className={`calendar-cell ${state} ${selectedDate === dateKey ? 'selected' : ''}`}
+                    className={`calendar-cell ${state} ${selectedDate === dateKey ? "selected" : ""}`}
                     onClick={() => setSelectedDate(dateKey)}
                   >
                     <strong>{date.getDate()}</strong>
                     {isScheduled ? (
                       <small>
-                        {state === 'saved'
-                          ? 'Đã lưu'
-                          : state === 'future'
-                            ? 'Sắp học'
-                            : 'Chưa lưu'}
+                        {state === "saved"
+                          ? "Đã lưu"
+                          : state === "future"
+                            ? "Sắp học"
+                            : "Chưa lưu"}
                       </small>
                     ) : null}
                   </button>
@@ -476,21 +511,25 @@ export default function LecturerAttendancePage() {
               <div>
                 <h2>
                   {selectedDate
-                    ? `Điểm danh ngày ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString('vi-VN')}`
-                    : 'Chọn một ngày học'}
+                    ? `Điểm danh ngày ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("vi-VN")}`
+                    : "Chọn một ngày học"}
                 </h2>
                 <span>
                   {selectedSession
-                    ? 'Dữ liệu đã lưu · có thể chỉnh sửa và lưu lại'
+                    ? "Dữ liệu đã lưu · có thể chỉnh sửa và lưu lại"
                     : selectedIsFuture
-                      ? 'Ngày học chưa diễn ra'
-                      : 'Chưa lưu điểm danh'}
+                      ? "Ngày học chưa diễn ra"
+                      : "Chưa lưu điểm danh"}
                 </span>
               </div>
-              {selectedSession ? <StatusBadge tone="success">Đã lưu</StatusBadge> : null}
+              {selectedSession ? (
+                <StatusBadge tone="success">Đã lưu</StatusBadge>
+              ) : null}
             </div>
 
-            {message ? <div className="form-alert attendance-message">{message}</div> : null}
+            {message ? (
+              <div className="form-alert attendance-message">{message}</div>
+            ) : null}
 
             {selectedDate ? (
               <div className="table-wrap">
@@ -514,7 +553,7 @@ export default function LecturerAttendancePage() {
                   <tbody>
                     {students.map((student, index) => {
                       const draft = drafts[student.id] || {
-                        status: 'present',
+                        status: "present",
                         absentPeriods: 0,
                       };
                       const summary = attendanceSummary(
@@ -541,16 +580,28 @@ export default function LecturerAttendancePage() {
                             >
                               <button
                                 type="button"
-                                className={draft.status === 'present' ? 'active present' : ''}
-                                onClick={() => changeStatus(student.id, 'present')}
+                                className={
+                                  draft.status === "present"
+                                    ? "active present"
+                                    : ""
+                                }
+                                onClick={() =>
+                                  changeStatus(student.id, "present")
+                                }
                                 disabled={selectedIsFuture}
                               >
                                 Có mặt
                               </button>
                               <button
                                 type="button"
-                                className={draft.status === 'absent' ? 'active absent' : ''}
-                                onClick={() => changeStatus(student.id, 'absent')}
+                                className={
+                                  draft.status === "absent"
+                                    ? "active absent"
+                                    : ""
+                                }
+                                onClick={() =>
+                                  changeStatus(student.id, "absent")
+                                }
                                 disabled={selectedIsFuture}
                               >
                                 Vắng
@@ -560,19 +611,30 @@ export default function LecturerAttendancePage() {
                           <td>
                             <div
                               className={`period-input-wrap ${
-                                draft.status === 'present' ? 'is-present' : 'is-absent'
+                                draft.status === "present"
+                                  ? "is-present"
+                                  : "is-absent"
                               }`}
                             >
                               <input
                                 className="period-input"
                                 type="number"
-                                min={draft.status === 'present' ? 0 : 1}
+                                min={draft.status === "present" ? 0 : 1}
                                 max={section.periodsPerSession || 3}
-                                value={draft.status === 'present' ? 0 : draft.absentPeriods}
-                                onChange={(event) =>
-                                  changeAbsentPeriods(student.id, event.target.value)
+                                value={
+                                  draft.status === "present"
+                                    ? 0
+                                    : draft.absentPeriods
                                 }
-                                disabled={selectedIsFuture || draft.status === 'present'}
+                                onChange={(event) =>
+                                  changeAbsentPeriods(
+                                    student.id,
+                                    event.target.value,
+                                  )
+                                }
+                                disabled={
+                                  selectedIsFuture || draft.status === "present"
+                                }
                                 aria-label={`Số tiết vắng của ${student.fullName}`}
                               />
                               <span className="period-input-unit">
@@ -582,11 +644,16 @@ export default function LecturerAttendancePage() {
                           </td>
                           <td>
                             <span>
-                              {summary.absentPeriods}/{summary.totalPeriods} tiết vắng
+                              {summary.absentPeriods}/{summary.totalPeriods}{" "}
+                              tiết vắng
                             </span>
                             <br />
-                            <StatusBadge tone={summary.eligible ? 'success' : 'danger'}>
-                              {summary.eligible ? 'Đủ điều kiện' : 'Không đủ điều kiện'}
+                            <StatusBadge
+                              tone={summary.eligible ? "success" : "danger"}
+                            >
+                              {summary.eligible
+                                ? "Đủ điều kiện"
+                                : "Không đủ điều kiện"}
                             </StatusBadge>
                           </td>
                         </tr>
@@ -604,7 +671,9 @@ export default function LecturerAttendancePage() {
                 </table>
               </div>
             ) : (
-              <div className="empty-state">Tháng này không có ngày học theo thời khóa biểu.</div>
+              <div className="empty-state">
+                Tháng này không có ngày học theo thời khóa biểu.
+              </div>
             )}
           </section>
         </div>

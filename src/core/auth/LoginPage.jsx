@@ -1,29 +1,29 @@
-import { useEffect, useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { SCHOOL_NAME } from '../../app/config.js';
-import SchoolLogo from '../../shared/components/SchoolLogo.jsx';
-import useAuth from './useAuth.js';
+import { useEffect, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { SCHOOL_NAME } from "../../app/config.js";
+import SchoolLogo from "../../shared/components/SchoolLogo.jsx";
+import useAuth from "./useAuth.js";
 
 const HOME_BY_ROLE = {
-  admin: '/admin',
-  lecturer: '/lecturer',
-  student: '/student',
+  admin: "/admin",
+  lecturer: "/lecturer",
+  student: "/student",
 };
 
 export default function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ username: '', password: '' });
-  const [error, setError] = useState('');
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setError('');
+    setError("");
   }, [form.username, form.password]);
 
   if (user) {
-    return <Navigate to={HOME_BY_ROLE[user.role] || '/login'} replace />;
+    return <Navigate to={HOME_BY_ROLE[user.role] || "/login"} replace />;
   }
 
   async function handleSubmit(event) {
@@ -31,7 +31,7 @@ export default function LoginPage() {
 
     const username = form.username.trim();
     if (!username || !form.password) {
-      setError('Vui lòng nhập đầy đủ tài khoản và mật khẩu.');
+      setError("Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
       return;
     }
 
@@ -39,13 +39,15 @@ export default function LoginPage() {
 
     try {
       const signedIn = await login(username, form.password);
-      const roleHome = HOME_BY_ROLE[signedIn.role] || '/login';
+      const roleHome = HOME_BY_ROLE[signedIn.role] || "/login";
       const previousPath = location.state?.from;
-      const destination = previousPath?.startsWith(roleHome) ? previousPath : roleHome;
+      const destination = previousPath?.startsWith(roleHome)
+        ? previousPath
+        : roleHome;
 
       navigate(destination, { replace: true });
     } catch (loginError) {
-      setError(loginError.message || 'Tên đăng nhập hoặc mật khẩu không đúng.');
+      setError(loginError.message || "Tên đăng nhập hoặc mật khẩu không đúng.");
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +79,11 @@ export default function LoginPage() {
       </section>
 
       <section className="auth-form-panel">
-        <form className="auth-form" onSubmit={handleSubmit} aria-labelledby="login-title">
+        <form
+          className="auth-form"
+          onSubmit={handleSubmit}
+          aria-labelledby="login-title"
+        >
           <div className="auth-form-head">
             <span>Đăng nhập</span>
             <h2 id="login-title">Chào mừng quay lại</h2>
@@ -89,7 +95,10 @@ export default function LoginPage() {
             <input
               value={form.username}
               onChange={(event) => {
-                setForm((current) => ({ ...current, username: event.target.value }));
+                setForm((current) => ({
+                  ...current,
+                  username: event.target.value,
+                }));
               }}
               autoComplete="username"
               placeholder="Ví dụ: admin"
@@ -103,7 +112,10 @@ export default function LoginPage() {
               type="password"
               value={form.password}
               onChange={(event) => {
-                setForm((current) => ({ ...current, password: event.target.value }));
+                setForm((current) => ({
+                  ...current,
+                  password: event.target.value,
+                }));
               }}
               autoComplete="current-password"
               placeholder="Nhập mật khẩu"
@@ -116,8 +128,12 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>
-            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập hệ thống'}
+          <button
+            className="btn btn-primary auth-submit"
+            type="submit"
+            disabled={submitting}
+          >
+            {submitting ? "Đang đăng nhập..." : "Đăng nhập hệ thống"}
           </button>
           <Link className="btn btn-light auth-public-link" to="/thong-tin">
             Xem thông tin đào tạo công khai
