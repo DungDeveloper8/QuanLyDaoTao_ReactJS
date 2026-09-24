@@ -2,10 +2,15 @@ import { useMemo, useState } from 'react';
 import { getAllData } from '../core/api/apiClient.js';
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx';
 import ExcelExportButton from '../shared/components/ExcelExportButton.jsx';
+import Icon from '../shared/components/Icon.jsx';
 import PageHeader from '../shared/components/PageHeader.jsx';
 import StatusBadge from '../shared/components/StatusBadge.jsx';
 import useFetch from '../shared/hooks/useFetch.js';
 import { isPassed, scoreClassification } from '../shared/utils/trainingRules.js';
+import {
+  createStudentTranscriptModel,
+  downloadStudentTranscript,
+} from '../shared/utils/transcriptExcel.js';
 
 const TABS = [
   { id: 'section', label: 'Theo học phần' },
@@ -188,13 +193,27 @@ export default function GradebooksPage() {
       : tab === 'faculty'
         ? data.faculties.find((item) => String(item.id) === String(view.selectedFacultyId))?.code
         : data.students.find((item) => String(item.id) === String(view.selectedStudentId))?.code;
+  const transcript = tab === 'student'
+    ? createStudentTranscriptModel(data, view.selectedStudentId)
+    : null;
 
   return (
     <div>
       <PageHeader
         title="Bảng điểm tổng hợp"
         description="Tra cứu bảng điểm theo học phần, lớp, khoa hoặc từng sinh viên."
-        actions={(
+        actions={tab === 'student' ? (
+          <button
+            className="btn btn-excel btn-sm"
+            type="button"
+            onClick={() => downloadStudentTranscript(data, view.selectedStudentId)}
+            disabled={!transcript?.rows.length}
+            title={transcript?.rows.length ? 'Xuất các học phần đã đạt' : 'Sinh viên chưa có học phần đạt'}
+          >
+            <Icon name="download" size={15} />
+            <span>{transcript?.graduated ? 'Xuất bảng điểm hoàn chỉnh' : 'Xuất bảng điểm'}</span>
+          </button>
+        ) : (
           <ExcelExportButton
             className="btn-sm"
             fileName={`bang-diem-${tab}-${fileSuffix || 'tong-hop'}.xls`}

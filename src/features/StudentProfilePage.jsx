@@ -8,7 +8,14 @@ import useFetch from '../shared/hooks/useFetch.js';
 import { calculateWeightedAverage, isPassed } from '../shared/utils/trainingRules.js';
 
 const GENDER_LABELS = { male: 'Nam', female: 'Nữ', other: 'Khác' };
-const STATUS_LABELS = { studying: 'Đang học', paused: 'Bảo lưu', graduated: 'Đã tốt nghiệp', stopped: 'Thôi học' };
+const STATUS_LABELS = {
+  studying: 'Đang học',
+  paused: 'Bảo lưu',
+  reserved: 'Bảo lưu',
+  graduated: 'Đã tốt nghiệp',
+  stopped: 'Thôi học',
+  dropped: 'Thôi học',
+};
 
 export default function StudentProfilePage() {
   const { user } = useAuth();

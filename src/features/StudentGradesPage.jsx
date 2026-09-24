@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import useAuth from '../core/auth/useAuth.js';
 import { getAllData } from '../core/api/apiClient.js';
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx';
+import Icon from '../shared/components/Icon.jsx';
 import PageHeader from '../shared/components/PageHeader.jsx';
 import StatCard from '../shared/components/StatCard.jsx';
 import StatusBadge from '../shared/components/StatusBadge.jsx';
@@ -11,6 +12,10 @@ import {
   isPassed,
   scoreClassification,
 } from '../shared/utils/trainingRules.js';
+import {
+  createStudentTranscriptModel,
+  downloadStudentTranscript,
+} from '../shared/utils/transcriptExcel.js';
 
 export default function StudentGradesPage() {
   const { user } = useAuth();
@@ -43,6 +48,7 @@ export default function StudentGradesPage() {
   const cumulativeScores = data.scores.filter(
     (item) => Number(item.studentId) === Number(user.studentId),
   );
+  const transcript = createStudentTranscriptModel(data, user.studentId);
 
 
   return (
@@ -50,6 +56,18 @@ export default function StudentGradesPage() {
       <PageHeader
         title="Bảng điểm sinh viên"
         description={`${student?.code || ''} - ${student?.fullName || ''}${classItem ? ` · ${classItem.code}` : ''}`}
+        actions={(
+          <button
+            className="btn btn-excel btn-sm"
+            type="button"
+            onClick={() => downloadStudentTranscript(data, user.studentId)}
+            disabled={!transcript.rows.length}
+            title={transcript.rows.length ? 'Xuất các học phần đã đạt' : 'Chưa có học phần đạt để xuất'}
+          >
+            <Icon name="download" size={15} />
+            <span>{transcript.graduated ? 'Xuất bảng điểm hoàn chỉnh' : 'Xuất bảng điểm'}</span>
+          </button>
+        )}
       />
 
       <div className="stats-grid">

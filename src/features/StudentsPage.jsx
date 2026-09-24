@@ -58,8 +58,9 @@ function normalizeGender(value) {
 function normalizeStudentStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (['đang học', 'dang hoc', 'studying', 'active'].includes(normalized)) return 'studying';
-  if (['bảo lưu', 'bao luu', 'reserved'].includes(normalized)) return 'reserved';
-  if (['thôi học', 'thoi hoc', 'dropped', 'inactive'].includes(normalized)) return 'dropped';
+  if (['bảo lưu', 'bao luu', 'paused', 'reserved'].includes(normalized)) return 'paused';
+  if (['đã tốt nghiệp', 'da tot nghiep', 'tốt nghiệp', 'tot nghiep', 'graduated'].includes(normalized)) return 'graduated';
+  if (['thôi học', 'thoi hoc', 'stopped', 'dropped', 'inactive'].includes(normalized)) return 'stopped';
   return '';
 }
 
@@ -87,15 +88,17 @@ function initialStudentPassword(code) {
 }
 
 function getStudentStatusLabel(status) {
-  if (status === 'studying') {
-    return 'Đang học'
-  }
+  if (status === 'studying') return 'Đang học'
+  if (status === 'paused' || status === 'reserved') return 'Bảo lưu'
+  if (status === 'graduated') return 'Đã tốt nghiệp'
+  if (status === 'stopped' || status === 'dropped') return 'Thôi học'
+  return status || '—'
+}
 
-  if (status === 'reserved') {
-    return 'Bảo lưu'
-  }
-
-  return 'Thôi học'
+function getStudentStatusTone(status) {
+  if (status === 'studying' || status === 'graduated') return 'success'
+  if (status === 'stopped' || status === 'dropped') return 'danger'
+  return 'warning'
 }
 
 export default function StudentsPage() {
@@ -226,6 +229,7 @@ export default function StudentsPage() {
     setForm({
       ...student,
       classId: String(student.classId),
+      status: normalizeStudentStatus(student.status) || student.status,
     })
     setFormError('')
     setFieldErrors({})
@@ -358,7 +362,7 @@ export default function StudentsPage() {
       seenCodes.add(code)
       if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error(`Dòng ${rowNumber}: email không đúng định dạng.`)
       if (!gender) throw new Error(`Dòng ${rowNumber}: giới tính chỉ nhận Nam/Nữ/Khác.`)
-      if (!status) throw new Error(`Dòng ${rowNumber}: trạng thái chỉ nhận Đang học/Bảo lưu/Thôi học.`)
+      if (!status) throw new Error(`Dòng ${rowNumber}: trạng thái chỉ nhận Đang học/Bảo lưu/Đã tốt nghiệp/Thôi học.`)
 
       const classItem = classByCode.get(classCode)
       if (!classItem) throw new Error(`Dòng ${rowNumber}: không tìm thấy lớp ${classCode}.`)
@@ -586,7 +590,7 @@ export default function StudentsPage() {
                   <td>{major?.name || '—'}</td>
                   <td>{student.email}</td>
                   <td>
-                    <StatusBadge tone={student.status === 'studying' ? 'success' : 'warning'}>
+                    <StatusBadge tone={getStudentStatusTone(student.status)}>
                       {getStudentStatusLabel(student.status)}
                     </StatusBadge>
                   </td>
@@ -692,8 +696,9 @@ export default function StudentsPage() {
               onChange={(event) => setForm({ ...form, status: event.target.value })}
             >
               <option value="studying">Đang học</option>
-              <option value="reserved">Bảo lưu</option>
-              <option value="dropped">Thôi học</option>
+              <option value="paused">Bảo lưu</option>
+              <option value="graduated">Đã tốt nghiệp</option>
+              <option value="stopped">Thôi học</option>
             </select>
           </label>
 
