@@ -8,6 +8,7 @@ import StatusBadge from '../shared/components/StatusBadge.jsx';
 import {
   attendanceSummary,
   calculateTotalScore,
+  isPassed,
   letterGrade,
   scoreClassification,
 } from '../shared/utils/trainingRules.js';
@@ -16,16 +17,17 @@ import { getExcelNumber, getExcelValue } from '../shared/utils/exportExcel.js';
 const SCORE_FIELDS = ['kt1', 'kt2', 'kt3', 'exam'];
 
 const SCORE_EXCEL_COLUMNS = [
-  { label: 'Mã sinh viên', value: 'studentCode', width: 95 },
-  { label: 'Họ và tên', value: 'fullName', width: 170 },
-  { label: 'Mã lớp học phần', value: 'sectionCode', width: 145 },
-  { label: 'KT1 (Chuyên cần)', value: 'kt1', type: 'Number', width: 110 },
-  { label: 'KT2 (Giữa kỳ 1)', value: 'kt2', type: 'Number', width: 110 },
-  { label: 'KT3 (Giữa kỳ 2)', value: 'kt3', type: 'Number', width: 110 },
-  { label: 'Thi cuối kỳ', value: 'exam', type: 'Number', width: 100 },
-  { label: 'Tổng kết', value: 'total', type: 'Number', width: 85 },
-  { label: 'Điểm chữ', value: 'letter', width: 75 },
-  { label: 'Xếp loại', value: 'classification', width: 90 },
+  { label: 'Mã sinh viên', value: 'studentCode', width: 72 },
+  { label: 'Họ và tên', value: 'fullName', width: 135 },
+  { label: 'Mã lớp học phần', value: 'sectionCode', width: 112 },
+  { label: 'KT1 (Chuyên cần)', value: 'kt1', type: 'Number', width: 72 },
+  { label: 'KT2 (Giữa kỳ 1)', value: 'kt2', type: 'Number', width: 72 },
+  { label: 'KT3 (Giữa kỳ 2)', value: 'kt3', type: 'Number', width: 72 },
+  { label: 'Thi cuối kỳ', value: 'exam', type: 'Number', width: 68 },
+  { label: 'Tổng kết', value: 'total', type: 'Number', width: 62 },
+  { label: 'Điểm chữ', value: 'letter', width: 55 },
+  { label: 'Xếp loại', value: 'classification', width: 78 },
+  { label: 'Kết quả', value: 'result', width: 72 },
 ];
 
 const SCORE_EXCEL_HEADERS = {
@@ -123,6 +125,16 @@ export default function LecturerScoresPage() {
   const subject = useMemo(
     () => data?.subjects.find((item) => Number(item.id) === Number(section?.subjectId)),
     [data, section],
+  );
+
+  const semester = useMemo(
+    () => data?.semesters.find((item) => Number(item.id) === Number(semesterId)),
+    [data, semesterId],
+  );
+
+  const lecturer = useMemo(
+    () => data?.lecturers.find((item) => Number(item.id) === Number(user.lecturerId)),
+    [data, user.lecturerId],
   );
 
   const students = useMemo(() => {
@@ -312,6 +324,9 @@ export default function LecturerScoresPage() {
                 exam: drafts[student.id]?.exam ?? '',
               }))}
               columns={SCORE_EXCEL_COLUMNS.slice(0, 7)}
+              title="MẪU NHẬP ĐIỂM HỌC PHẦN"
+              variant="template"
+              orientation="Landscape"
             >
               Tải mẫu điểm
             </ExcelExportButton>
@@ -342,9 +357,19 @@ export default function LecturerScoresPage() {
                   total,
                   letter: total === '' ? '' : letterGrade(total),
                   classification: total === '' ? '' : scoreClassification(total),
+                  result: total === '' ? 'Chưa nhập' : isPassed(total) ? 'Đạt' : 'Không đạt',
                 };
               })}
               columns={SCORE_EXCEL_COLUMNS}
+              title="BẢNG ĐIỂM HỌC PHẦN"
+              subtitle={subject ? `${subject.code} - ${subject.name}` : ''}
+              metadata={[
+                { label: 'Lớp học phần', value: section?.code || '' },
+                { label: 'Học kỳ', value: semester ? `${semester.name} - ${semester.academicYear}` : '' },
+                { label: 'Số tín chỉ', value: subject?.credits ?? '' },
+                { label: 'Giảng viên', value: lecturer?.fullName || '' },
+              ]}
+              orientation="Landscape"
             />
             <button
               className="btn btn-primary"

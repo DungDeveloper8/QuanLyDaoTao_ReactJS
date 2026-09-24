@@ -7,11 +7,26 @@ export default function ExcelExportButton({
   sheetName,
   columns,
   rows,
+  title = '',
+  subtitle = '',
+  metadata = [],
+  variant = 'report',
+  orientation,
   className = '',
   children = 'Xuất Excel',
 }) {
   function handleExport() {
-    downloadExcel2003({ fileName, sheetName, columns, rows });
+    downloadExcel2003({
+      fileName,
+      sheetName,
+      columns,
+      rows,
+      title,
+      subtitle,
+      metadata,
+      variant,
+      orientation,
+    });
   }
 
   return (

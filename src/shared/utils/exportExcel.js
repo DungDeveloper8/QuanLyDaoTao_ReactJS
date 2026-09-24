@@ -1,3 +1,5 @@
+import { SCHOOL_NAME } from '../../app/config.js';
+
 function escapeXml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -28,13 +30,12 @@ export function normalizeExcelHeader(value) {
 export function getExcelValue(row, aliases) {
   const normalizedAliases = (Array.isArray(aliases) ? aliases : [aliases])
     .map(normalizeExcelHeader);
-  const entries = Object.entries(row || {});
 
-  for (const [header, value] of entries) {
+  for (const [header, value] of Object.entries(row || {})) {
     if (
-      normalizedAliases.includes(normalizeExcelHeader(header)) &&
-      value != null &&
-      String(value).trim() !== ''
+      normalizedAliases.includes(normalizeExcelHeader(header))
+      && value != null
+      && String(value).trim() !== ''
     ) {
       return value;
     }
@@ -65,103 +66,292 @@ export function normalizeExcelDate(value) {
   const serial = Number(raw);
   if (Number.isFinite(serial) && serial > 20000 && serial < 80000) {
     const base = Date.UTC(1899, 11, 30);
-    const date = new Date(base + Math.round(serial) * 86400000);
-    return date.toISOString().slice(0, 10);
+    return new Date(base + Math.round(serial) * 86400000).toISOString().slice(0, 10);
   }
 
   return '';
 }
 
-function createCell(value, type = 'String', styleId = 'Cell') {
-  return `<Cell ss:StyleID="${styleId}"><Data ss:Type="${type}">${escapeXml(value)}</Data></Cell>`;
+function cell(value, { type = 'String', style = 'TextOdd', mergeAcross = 0 } = {}) {
+  const merge = mergeAcross > 0 ? ` ss:MergeAcross="${mergeAcross}"` : '';
+  return `<Cell ss:StyleID="${style}"${merge}><Data ss:Type="${type}">${escapeXml(value)}</Data></Cell>`;
 }
 
-export function downloadExcel2003({ fileName, sheetName, columns, rows }) {
+function row(cells, height) {
+  const rowHeight = height ? ` ss:Height="${height}"` : '';
+  return `<Row${rowHeight}>${cells.join('')}</Row>`;
+}
+
+function valueOf(column, item) {
+  return typeof column.value === 'function' ? column.value(item) : item?.[column.value];
+}
+
+function formatExportDate(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${date.getFullYear()}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function columnWidth(column, rows) {
+  const configured = Number(column.width);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+
+  const values = rows.slice(0, 80).map((item) => String(valueOf(column, item) ?? ''));
+  const maxLength = Math.max(String(column.label || '').length, ...values.map((value) => value.length));
+  return clamp(maxLength * 6.2 + 18, 58, 220);
+}
+
+function statusStyle(value) {
+  const normalized = normalizeExcelHeader(value);
+  if (['dat', 'du dieu kien', 'dang hoc', 'da tot nghiep'].includes(normalized)) return 'StatusGood';
+  if (['khong dat', 'khong du dieu kien', 'thoi hoc'].includes(normalized)) return 'StatusBad';
+  if (['bao luu', 'chua nhap', 'chua co'].includes(normalized)) return 'StatusWarn';
+  return '';
+}
+
+function inferredAlignment(column) {
+  if (column.align) return column.align;
+  if (column.type === 'Number') return 'center';
+
+  const label = normalizeExcelHeader(column.label);
+  if (/^(ma|gioi tinh|ngay sinh|lop|so dien thoai|trang thai|diem|ket qua|xep loai|so tc|tin chi)/.test(label)) {
+    return 'center';
+  }
+
+  return 'left';
+}
+
+function bodyStyle(column, value, rowIndex) {
+  const status = statusStyle(value);
+  if (status) return status;
+
+  const suffix = rowIndex % 2 === 0 ? 'Even' : 'Odd';
+  if (column.type === 'Number') return `Number${suffix}`;
+  if (inferredAlignment(column) === 'center') return `Center${suffix}`;
+  if (inferredAlignment(column) === 'right') return `Right${suffix}`;
+  return `Text${suffix}`;
+}
+
+function buildDataRows(columns, rows, template) {
+  return rows.map((item, rowIndex) => row(columns.map((column) => {
+    const raw = valueOf(column, item);
+    const numeric = column.type === 'Number'
+      && raw !== ''
+      && raw != null
+      && Number.isFinite(Number(raw));
+
+    return cell(numeric ? Number(raw) : raw, {
+      type: numeric ? 'Number' : 'String',
+      style: template
+        ? (numeric ? 'TemplateNumber' : 'TemplateInput')
+        : bodyStyle(column, raw, rowIndex),
+    });
+  }), 24)).join('\n   ');
+}
+
+function buildMetadataRows(metadata, columnCount) {
+  return (Array.isArray(metadata) ? metadata : [])
+    .filter((item) => item?.value != null && String(item.value).trim() !== '')
+    .map((item) => row([
+      cell(`${item.label || ''}: ${item.value}`, {
+        style: 'Meta',
+        mergeAcross: columnCount - 1,
+      }),
+    ], 20));
+}
+
+function styles() {
+  return `<Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Color="#1F2937"/>
+  </Style>
+  <Style ss:ID="Brand">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="11" ss:Bold="1" ss:Color="#17365D"/>
+  </Style>
+  <Style ss:ID="Title">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Times New Roman" ss:Size="16" ss:Bold="1" ss:Color="#0F2742"/>
+  </Style>
+  <Style ss:ID="Subtitle">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Italic="1" ss:Color="#52677D"/>
+  </Style>
+  <Style ss:ID="Meta">
+   <Alignment ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Color="#334E68"/>
+   <Interior ss:Color="#F7FAFC" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Header">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1F4E78" ss:Pattern="Solid"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#163A5B"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#163A5B"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#163A5B"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#163A5B"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TemplateHeader" ss:Parent="Header">
+   <Interior ss:Color="#1F4E78" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="BaseCell">
+   <Alignment ss:Vertical="Center" ss:WrapText="1"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Color="#1F2937"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DEE8"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DEE8"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DEE8"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DEE8"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="TextOdd" ss:Parent="BaseCell"><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="TextEven" ss:Parent="BaseCell"><Interior ss:Color="#F6F9FC" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="CenterOdd" ss:Parent="BaseCell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="CenterEven" ss:Parent="BaseCell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F6F9FC" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="RightOdd" ss:Parent="BaseCell"><Alignment ss:Horizontal="Right" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="RightEven" ss:Parent="BaseCell"><Alignment ss:Horizontal="Right" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F6F9FC" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="NumberOdd" ss:Parent="CenterOdd"><NumberFormat ss:Format="0.##"/></Style>
+  <Style ss:ID="NumberEven" ss:Parent="CenterEven"><NumberFormat ss:Format="0.##"/></Style>
+  <Style ss:ID="TemplateInput" ss:Parent="BaseCell"><Interior ss:Color="#FFFBEA" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="TemplateNumber" ss:Parent="TemplateInput"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="0.##"/></Style>
+  <Style ss:ID="StatusGood" ss:Parent="BaseCell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Bold="1" ss:Color="#166534"/>
+   <Interior ss:Color="#E8F5E9" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="StatusBad" ss:Parent="BaseCell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Bold="1" ss:Color="#991B1B"/>
+   <Interior ss:Color="#FDECEC" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="StatusWarn" ss:Parent="BaseCell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Bold="1" ss:Color="#92400E"/>
+   <Interior ss:Color="#FFF4D6" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Total">
+   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+   <Font ss:FontName="Times New Roman" ss:Size="10" ss:Bold="1" ss:Color="#17365D"/>
+   <Interior ss:Color="#EAF2F8" ss:Pattern="Solid"/>
+   <Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#9FBAD0"/></Borders>
+  </Style>
+ </Styles>`;
+}
+
+export function buildExcel2003Xml({
+  sheetName,
+  columns,
+  rows,
+  title = '',
+  subtitle = '',
+  metadata = [],
+  variant = 'report',
+  orientation,
+}) {
   if (!Array.isArray(columns) || !columns.length) {
     throw new Error('Cấu hình cột Excel không hợp lệ.');
   }
 
   const safeRows = Array.isArray(rows) ? rows : [];
-  const header = columns
-    .map((column) => createCell(column.label, 'String', 'Header'))
-    .join('');
+  const columnCount = columns.length;
+  const template = variant === 'template';
+  const documentTitle = String(title || sheetName || 'Báo cáo').trim();
+  const resolvedOrientation = orientation || (columnCount >= 7 ? 'Landscape' : 'Portrait');
   const columnDefinitions = columns
-    .map((column) => `<Column ss:AutoFitWidth="1" ss:Width="${Number(column.width) || 120}"/>`)
+    .map((column) => `<Column ss:AutoFitWidth="0" ss:Width="${columnWidth(column, safeRows).toFixed(0)}"/>`)
     .join('');
-  const body = safeRows
-    .map((row) => {
-      const cells = columns
-        .map((column) => {
-          const value = typeof column.value === 'function'
-            ? column.value(row)
-            : row?.[column.value];
-          const numeric = column.type === 'Number' && value !== '' && value != null;
+  const header = row(columns.map((column) => cell(column.label, {
+    style: template ? 'TemplateHeader' : 'Header',
+  })), 34);
+  const dataRows = buildDataRows(columns, safeRows, template);
 
-          return createCell(
-            numeric ? Number(value) : value,
-            numeric ? 'Number' : 'String',
-            numeric ? 'NumberCell' : 'Cell',
-          );
-        })
-        .join('');
+  let tableRows;
+  let headerRowIndex;
+  let lastDataRow;
 
-      return `<Row>${cells}</Row>`;
-    })
-    .join('');
+  if (template) {
+    tableRows = `${header}${dataRows ? `\n   ${dataRows}` : ''}`;
+    headerRowIndex = 1;
+    lastDataRow = Math.max(1, safeRows.length + 1);
+  } else {
+    const intro = [
+      row([cell(SCHOOL_NAME.toUpperCase(), { style: 'Brand', mergeAcross: columnCount - 1 })], 22),
+      row([cell(documentTitle.toUpperCase(), { style: 'Title', mergeAcross: columnCount - 1 })], 32),
+      ...(subtitle ? [row([cell(subtitle, { style: 'Subtitle', mergeAcross: columnCount - 1 })], 22)] : []),
+      ...buildMetadataRows(metadata, columnCount),
+      row([cell('', { style: 'TextOdd', mergeAcross: columnCount - 1 })], 8),
+    ];
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    headerRowIndex = intro.length + 1;
+    lastDataRow = headerRowIndex + safeRows.length;
+    const total = row([
+      cell(`Tổng số bản ghi: ${safeRows.length}`, { style: 'Total', mergeAcross: columnCount - 1 }),
+    ], 23);
+    tableRows = `${intro.join('\n   ')}\n   ${header}${dataRows ? `\n   ${dataRows}` : ''}\n   ${total}`;
+  }
+
+  const autoFilter = safeRows.length
+    ? `<AutoFilter x:Range="R${headerRowIndex}C1:R${lastDataRow}C${columnCount}" xmlns="urn:schemas-microsoft-com:office:excel"/>`
+    : '';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:o="urn:schemas-microsoft-com:office:office"
  xmlns:x="urn:schemas-microsoft-com:office:excel"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Center"/>
-   <Font ss:FontName="Arial" ss:Size="10"/>
-  </Style>
-  <Style ss:ID="Header">
-   <Alignment ss:Vertical="Center"/>
-   <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#173B67" ss:Pattern="Solid"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
-   </Borders>
-  </Style>
-  <Style ss:ID="Cell">
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-   </Borders>
-  </Style>
-  <Style ss:ID="NumberCell">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-   </Borders>
-  </Style>
- </Styles>
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Author>${escapeXml(SCHOOL_NAME)}</Author>
+  <Title>${escapeXml(documentTitle)}</Title>
+  <Company>${escapeXml(SCHOOL_NAME)}</Company>
+ </DocumentProperties>
+ ${styles()}
  <Worksheet ss:Name="${escapeXml(sanitizeSheetName(sheetName))}">
-  <Table>
+  <Table ss:DefaultRowHeight="20">
    ${columnDefinitions}
-   <Row ss:Height="22">${header}</Row>
-   ${body}
+   ${tableRows}
   </Table>
+  ${autoFilter}
   <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <Selected/>
+   <DoNotDisplayGridlines/>
    <FreezePanes/>
    <FrozenNoSplit/>
-   <SplitHorizontal>1</SplitHorizontal>
-   <TopRowBottomPane>1</TopRowBottomPane>
+   <SplitHorizontal>${headerRowIndex}</SplitHorizontal>
+   <TopRowBottomPane>${headerRowIndex}</TopRowBottomPane>
+   <PageSetup>
+    <Layout x:Orientation="${resolvedOrientation}" x:CenterHorizontal="1"/>
+    <Header x:Margin="0.2" x:Data="&amp;C${escapeXml(template ? documentTitle : SCHOOL_NAME)}"/>
+    <Footer x:Margin="0.25" x:Data="&amp;L${escapeXml(formatExportDate())}&amp;RTrang &amp;P / &amp;N"/>
+    <PageMargins x:Bottom="0.45" x:Left="0.3" x:Right="0.3" x:Top="0.45"/>
+   </PageSetup>
+   <FitToPage/>
+   <Print>
+    <PaperSizeIndex>9</PaperSizeIndex>
+    <FitWidth>1</FitWidth>
+    <FitHeight>0</FitHeight>
+   </Print>
+   <Zoom>90</Zoom>
   </WorksheetOptions>
  </Worksheet>
 </Workbook>`;
+}
 
-  const blob = new Blob([`\ufeff${xml}`], {
-    type: 'application/vnd.ms-excel;charset=utf-8',
-  });
+export function downloadExcel2003(options) {
+  const xml = buildExcel2003Xml(options);
+  const fileName = String(options?.fileName || 'du-lieu.xls');
+  const blob = new Blob([`\ufeff${xml}`], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = fileName.endsWith('.xls') ? fileName : `${fileName}.xls`;
+  anchor.download = fileName.toLowerCase().endsWith('.xls') ? fileName : `${fileName}.xls`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -203,9 +393,9 @@ function rowsToObjects(rows) {
   }
 
   return bodyRows
-    .filter((row) => row.some((value) => String(value ?? '').trim() !== ''))
-    .map((row) => Object.fromEntries(
-      headers.map((header, index) => [header, row[index] ?? '']),
+    .filter((item) => item.some((value) => String(value ?? '').trim() !== ''))
+    .map((item) => Object.fromEntries(
+      headers.map((header, index) => [header, item[index] ?? '']),
     ));
 }
 
@@ -225,13 +415,13 @@ function parseSpreadsheetXml(text) {
     const values = [];
     let targetIndex = 0;
 
-    for (const cell of cells) {
-      const explicitIndex = [...cell.attributes].find(
+    for (const currentCell of cells) {
+      const explicitIndex = [...currentCell.attributes].find(
         (attribute) => attribute.localName === 'Index',
       );
       if (explicitIndex) targetIndex = Math.max(0, Number(explicitIndex.value) - 1);
 
-      const dataNode = cell.getElementsByTagNameNS('*', 'Data')[0];
+      const dataNode = currentCell.getElementsByTagNameNS('*', 'Data')[0];
       values[targetIndex] = dataNode?.textContent ?? '';
       targetIndex += 1;
     }
@@ -260,70 +450,121 @@ function localElements(node, localName) {
   return [...node.getElementsByTagNameNS('*', localName)];
 }
 
-function decodeEntry(bytes) {
-  return new TextDecoder('utf-8').decode(bytes);
+function firstLocal(node, localName) {
+  return localElements(node, localName)[0] || null;
 }
 
-function normalizeWorkbookTarget(target) {
-  const value = String(target || '').replace(/^\//, '');
-  if (value.startsWith('xl/')) return value;
-  return `xl/${value.replace(/^\.\//, '')}`;
+function relationshipTarget(documentXml, relationshipId) {
+  const relationship = localElements(documentXml, 'Relationship').find(
+    (item) => item.getAttribute('Id') === relationshipId,
+  );
+  return relationship?.getAttribute('Target') || '';
 }
 
-async function unzipXlsx(arrayBuffer) {
-  const bytes = new Uint8Array(arrayBuffer);
-  const view = new DataView(arrayBuffer);
-  const minOffset = Math.max(0, bytes.length - 65557);
-  let eocdOffset = -1;
+function sharedStringsFromXml(text) {
+  if (!text) return [];
+  const documentXml = xmlDocument(text, 'Tệp .xlsx có bảng chuỗi không hợp lệ.');
+  return localElements(documentXml, 'si').map((item) =>
+    localElements(item, 't').map((textNode) => textNode.textContent || '').join(''));
+}
 
-  for (let offset = bytes.length - 22; offset >= minOffset; offset -= 1) {
-    if (view.getUint32(offset, true) === 0x06054b50) {
-      eocdOffset = offset;
-      break;
-    }
-  }
-  if (eocdOffset < 0) throw new Error('Tệp .xlsx không có cấu trúc ZIP hợp lệ.');
+function columnIndex(reference) {
+  const letters = String(reference || '').match(/^[A-Z]+/i)?.[0]?.toUpperCase() || '';
+  return [...letters].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+}
 
-  const entryCount = view.getUint16(eocdOffset + 10, true);
-  let offset = view.getUint32(eocdOffset + 16, true);
+function rowsFromWorksheetXml(text, sharedStrings) {
+  const documentXml = xmlDocument(text, 'Tệp .xlsx có worksheet không hợp lệ.');
+
+  return localElements(documentXml, 'row').map((rowNode) => {
+    const values = [];
+
+    localElements(rowNode, 'c').forEach((cellNode) => {
+      const index = columnIndex(cellNode.getAttribute('r'));
+      const type = cellNode.getAttribute('t');
+      const valueNode = firstLocal(cellNode, 'v');
+      const inlineString = firstLocal(cellNode, 'is');
+      let value = '';
+
+      if (type === 's') {
+        value = sharedStrings[Number(valueNode?.textContent || 0)] || '';
+      } else if (type === 'inlineStr') {
+        value = localElements(inlineString || cellNode, 't')
+          .map((item) => item.textContent || '')
+          .join('');
+      } else if (type === 'b') {
+        value = valueNode?.textContent === '1' ? 'TRUE' : 'FALSE';
+      } else {
+        value = valueNode?.textContent || '';
+      }
+
+      values[Math.max(0, index)] = value;
+    });
+
+    return values;
+  });
+}
+
+function normalizeZipPath(basePath, target) {
+  const raw = target.startsWith('/')
+    ? target.slice(1)
+    : `${basePath.slice(0, basePath.lastIndexOf('/') + 1)}${target}`;
+  const parts = [];
+
+  raw.split('/').forEach((part) => {
+    if (!part || part === '.') return;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  });
+
+  return parts.join('/');
+}
+
+async function unzipEntries(file) {
+  const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  const decoder = new TextDecoder('utf-8');
   const entries = new Map();
+  let end = bytes.length - 22;
 
-  for (let index = 0; index < entryCount; index += 1) {
+  while (end >= 0 && view.getUint32(end, true) !== 0x06054b50) end -= 1;
+  if (end < 0) throw new Error('Tệp .xlsx không hợp lệ.');
+
+  const centralOffset = view.getUint32(end + 16, true);
+  const totalEntries = view.getUint16(end + 10, true);
+  let offset = centralOffset;
+
+  for (let index = 0; index < totalEntries; index += 1) {
     if (view.getUint32(offset, true) !== 0x02014b50) {
-      throw new Error('Không đọc được danh mục tệp bên trong .xlsx.');
+      throw new Error('Tệp .xlsx có cấu trúc ZIP không hợp lệ.');
     }
 
-    const method = view.getUint16(offset + 10, true);
+    const compression = view.getUint16(offset + 10, true);
     const compressedSize = view.getUint32(offset + 20, true);
     const fileNameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
     const localOffset = view.getUint32(offset + 42, true);
-    const name = new TextDecoder('utf-8').decode(
-      bytes.slice(offset + 46, offset + 46 + fileNameLength),
-    );
+    const name = decoder.decode(bytes.slice(offset + 46, offset + 46 + fileNameLength));
 
     if (view.getUint32(localOffset, true) !== 0x04034b50) {
       throw new Error('Tệp .xlsx có mục ZIP không hợp lệ.');
     }
+
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
     const dataStart = localOffset + 30 + localNameLength + localExtraLength;
     const compressed = bytes.slice(dataStart, dataStart + compressedSize);
-
     let content;
-    if (method === 0) {
+
+    if (compression === 0) {
       content = compressed;
-    } else if (method === 8) {
-      if (!globalThis.DecompressionStream) {
-        throw new Error('Trình duyệt chưa hỗ trợ giải nén .xlsx. Hãy dùng Chrome/Edge mới hoặc tệp .xls.');
-      }
-      const stream = new Blob([compressed])
-        .stream()
-        .pipeThrough(new DecompressionStream('deflate-raw'));
+    } else if (compression === 8 && typeof DecompressionStream !== 'undefined') {
+      const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
       content = new Uint8Array(await new Response(stream).arrayBuffer());
     } else {
-      throw new Error(`Tệp .xlsx dùng kiểu nén chưa hỗ trợ (${method}).`);
+      throw new Error('Trình duyệt không hỗ trợ đọc tệp .xlsx này. Hãy dùng .xls hoặc .csv.');
     }
 
     entries.set(name, content);
@@ -333,91 +574,40 @@ async function unzipXlsx(arrayBuffer) {
   return entries;
 }
 
-function xlsxSharedStrings(entries) {
-  const content = entries.get('xl/sharedStrings.xml');
-  if (!content) return [];
-  const documentXml = xmlDocument(decodeEntry(content), 'Shared strings trong .xlsx không hợp lệ.');
-  return localElements(documentXml, 'si').map((item) =>
-    localElements(item, 't').map((node) => node.textContent || '').join(''),
-  );
-}
-
-function firstWorksheetPath(entries) {
-  const workbookContent = entries.get('xl/workbook.xml');
-  const relationshipsContent = entries.get('xl/_rels/workbook.xml.rels');
-
-  if (workbookContent && relationshipsContent) {
-    const workbook = xmlDocument(decodeEntry(workbookContent), 'workbook.xml không hợp lệ.');
-    const firstSheet = localElements(workbook, 'sheet')[0];
-    const relationshipId = firstSheet
-      ? [...firstSheet.attributes].find((attribute) => attribute.localName === 'id')?.value
-      : '';
-
-    if (relationshipId) {
-      const relationships = xmlDocument(
-        decodeEntry(relationshipsContent),
-        'Quan hệ workbook trong .xlsx không hợp lệ.',
-      );
-      const relationship = localElements(relationships, 'Relationship')
-        .find((item) => item.getAttribute('Id') === relationshipId);
-      const target = relationship?.getAttribute('Target');
-      if (target) return normalizeWorkbookTarget(target);
-    }
-  }
-
-  return [...entries.keys()]
-    .filter((name) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name))
-    .sort()[0];
-}
-
-function parseXlsxWorksheet(entries) {
-  const worksheetPath = firstWorksheetPath(entries);
-  if (!worksheetPath || !entries.has(worksheetPath)) {
-    throw new Error('Không tìm thấy worksheet trong tệp .xlsx.');
-  }
-
-  const sharedStrings = xlsxSharedStrings(entries);
-  const sheet = xmlDocument(decodeEntry(entries.get(worksheetPath)), 'Worksheet trong .xlsx không hợp lệ.');
-  const rows = localElements(sheet, 'row').map((rowNode) => {
-    const row = [];
-    for (const cell of localElements(rowNode, 'c')) {
-      const reference = cell.getAttribute('r') || '';
-      const columnLetters = reference.match(/^[A-Z]+/i)?.[0]?.toUpperCase() || '';
-      let columnIndex = 0;
-      for (const letter of columnLetters) {
-        columnIndex = columnIndex * 26 + (letter.charCodeAt(0) - 64);
-      }
-      columnIndex = Math.max(0, columnIndex - 1);
-
-      const type = cell.getAttribute('t');
-      const raw = localElements(cell, 'v')[0]?.textContent ?? '';
-      let value = raw;
-      if (type === 's') value = sharedStrings[Number(raw)] ?? '';
-      if (type === 'inlineStr') {
-        value = localElements(cell, 't').map((node) => node.textContent || '').join('');
-      }
-      row[columnIndex] = value;
-    }
-    return row;
-  });
-
-  return rowsToObjects(rows);
-}
-
 async function parseXlsx(file) {
-  const entries = await unzipXlsx(await file.arrayBuffer());
-  return parseXlsxWorksheet(entries);
+  const entries = await unzipEntries(file);
+  const workbookBytes = entries.get('xl/workbook.xml');
+  const relsBytes = entries.get('xl/_rels/workbook.xml.rels');
+  if (!workbookBytes || !relsBytes) throw new Error('Tệp .xlsx thiếu workbook.');
+
+  const decoder = new TextDecoder('utf-8');
+  const workbookXml = xmlDocument(decoder.decode(workbookBytes), 'Workbook .xlsx không hợp lệ.');
+  const relsXml = xmlDocument(decoder.decode(relsBytes), 'Quan hệ workbook .xlsx không hợp lệ.');
+  const firstSheet = firstLocal(workbookXml, 'sheet');
+  if (!firstSheet) return [];
+
+  const relationId = firstSheet.getAttribute('r:id')
+    || [...firstSheet.attributes].find((item) => item.localName === 'id')?.value;
+  const target = relationshipTarget(relsXml, relationId);
+  if (!target) throw new Error('Không xác định được worksheet đầu tiên trong .xlsx.');
+
+  const worksheetPath = normalizeZipPath('xl/workbook.xml', target);
+  const worksheetBytes = entries.get(worksheetPath);
+  if (!worksheetBytes) throw new Error('Không đọc được worksheet trong .xlsx.');
+
+  const sharedBytes = entries.get('xl/sharedStrings.xml');
+  const sharedStrings = sharedStringsFromXml(sharedBytes ? decoder.decode(sharedBytes) : '');
+  return rowsToObjects(rowsFromWorksheetXml(decoder.decode(worksheetBytes), sharedStrings));
 }
 
 export async function readExcelTable(file) {
-  if (!file) return [];
-  const extension = file.name.split('.').pop()?.toLowerCase();
-
-  if (!['xlsx', 'xls', 'csv'].includes(extension)) {
-    throw new Error('Chỉ hỗ trợ .xlsx, .xls hoặc .csv.');
-  }
+  const extension = String(file?.name || '').toLowerCase().split('.').pop();
 
   if (extension === 'xlsx') return parseXlsx(file);
+
   const text = await file.text();
-  return extension === 'csv' ? parseCsv(text) : parseSpreadsheetXml(text);
+  if (extension === 'csv') return parseCsv(text);
+  if (extension === 'xls' || text.includes('<Workbook')) return parseSpreadsheetXml(text);
+
+  throw new Error('Định dạng tệp không được hỗ trợ. Hãy dùng .xlsx, .xls hoặc .csv.');
 }

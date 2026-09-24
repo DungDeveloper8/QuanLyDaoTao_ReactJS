@@ -60,20 +60,27 @@ export default function ReportsPage() {
   }
 
   function exportReport() {
+    const semester = data.semesters.find(
+      (item) => Number(item.id) === Number(selectedSemester),
+    );
     downloadExcel2003({
       fileName: 'bao-cao-chuyen-can.xls',
       sheetName: 'Chuyen can',
+      title: 'BÁO CÁO CHUYÊN CẦN',
+      subtitle: semester ? `${semester.name} - ${semester.academicYear}` : '',
+      orientation: 'Landscape',
       columns: [
-        { label: 'Mã sinh viên', value: (row) => row.student?.code || '' },
-        { label: 'Họ và tên', value: (row) => row.student?.fullName || '' },
-        { label: 'Lớp học phần', value: (row) => row.section.code },
-        { label: 'Môn học', value: (row) => row.subject?.name || '' },
-        { label: 'Tổng tiết đã học', value: (row) => row.summary.totalPeriods, type: 'Number' },
-        { label: 'Số tiết vắng', value: (row) => row.summary.absentPeriods, type: 'Number' },
-        { label: 'Tỷ lệ vắng (%)', value: (row) => row.summary.absenceRate, type: 'Number' },
+        { label: 'Mã sinh viên', value: (row) => row.student?.code || '', width: 72 },
+        { label: 'Họ và tên', value: (row) => row.student?.fullName || '', width: 135 },
+        { label: 'Lớp học phần', value: (row) => row.section.code, width: 110 },
+        { label: 'Môn học', value: (row) => row.subject?.name || '', width: 155 },
+        { label: 'Tổng tiết đã học', value: (row) => row.summary.totalPeriods, type: 'Number', width: 72 },
+        { label: 'Số tiết vắng', value: (row) => row.summary.absentPeriods, type: 'Number', width: 68 },
+        { label: 'Tỷ lệ vắng (%)', value: (row) => row.summary.absenceRate, type: 'Number', width: 75 },
         {
           label: 'Điều kiện dự thi',
           value: (row) => (row.summary.eligible ? 'Đủ điều kiện' : 'Không đủ điều kiện'),
+          width: 105,
         },
       ],
       rows,

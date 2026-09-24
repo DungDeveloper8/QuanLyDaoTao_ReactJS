@@ -62,18 +62,19 @@ function scoreRows(data) {
 
 function exportColumns() {
   return [
-    { label: 'Mã SV', value: (row) => row.student?.code || '' },
-    { label: 'Họ tên', value: (row) => row.student?.fullName || '', width: 170 },
-    { label: 'Lớp', value: (row) => row.classItem?.code || '' },
-    { label: 'Mã học phần', value: (row) => row.section?.code || '', width: 145 },
-    { label: 'Môn học', value: (row) => row.subject?.name || '', width: 190 },
-    { label: 'KT1 (Chuyên cần)', value: (row) => row.score.kt1, type: 'Number' },
-    { label: 'KT2 (Giữa kỳ 1)', value: (row) => row.score.kt2, type: 'Number' },
-    { label: 'KT3 (Giữa kỳ 2)', value: (row) => row.score.kt3, type: 'Number' },
-    { label: 'Thi cuối kỳ', value: (row) => row.score.exam, type: 'Number' },
-    { label: 'Tổng kết', value: (row) => row.score.total, type: 'Number' },
-    { label: 'Điểm chữ', value: (row) => row.score.letter },
-    { label: 'Kết quả', value: (row) => row.score.total == null ? 'Chưa nhập' : isPassed(row.score.total) ? 'Đạt' : 'Không đạt' },
+    { label: 'Mã SV', value: (row) => row.student?.code || '', width: 62 },
+    { label: 'Họ tên', value: (row) => row.student?.fullName || '', width: 120 },
+    { label: 'Lớp', value: (row) => row.classItem?.code || '', width: 72 },
+    { label: 'Mã học phần', value: (row) => row.section?.code || '', width: 100 },
+    { label: 'Môn học', value: (row) => row.subject?.name || '', width: 130 },
+    { label: 'KT1 (Chuyên cần)', value: (row) => row.score.kt1, type: 'Number', width: 56 },
+    { label: 'KT2 (Giữa kỳ 1)', value: (row) => row.score.kt2, type: 'Number', width: 56 },
+    { label: 'KT3 (Giữa kỳ 2)', value: (row) => row.score.kt3, type: 'Number', width: 56 },
+    { label: 'Thi cuối kỳ', value: (row) => row.score.exam, type: 'Number', width: 56 },
+    { label: 'Tổng kết', value: (row) => row.score.total, type: 'Number', width: 56 },
+    { label: 'Điểm chữ', value: (row) => row.score.letter, width: 46 },
+    { label: 'Xếp loại', value: (row) => row.score.total == null ? 'Chưa có' : scoreClassification(row.score.total), width: 76 },
+    { label: 'Kết quả', value: (row) => row.score.total == null ? 'Chưa nhập' : isPassed(row.score.total) ? 'Đạt' : 'Không đạt', width: 72 },
   ];
 }
 
@@ -196,6 +197,37 @@ export default function GradebooksPage() {
   const transcript = tab === 'student'
     ? createStudentTranscriptModel(data, view.selectedStudentId)
     : null;
+  const selectedSemester = data.semesters.find(
+    (item) => String(item.id) === String(view.selectedSemesterId),
+  );
+  const selectedSection = data.courseSections.find(
+    (item) => String(item.id) === String(view.selectedSectionId),
+  );
+  const selectedClass = data.classes.find(
+    (item) => String(item.id) === String(view.selectedClassId),
+  );
+  const selectedFaculty = data.faculties.find(
+    (item) => String(item.id) === String(view.selectedFacultyId),
+  );
+  const selectedSubject = data.subjects.find(
+    (item) => Number(item.id) === Number(selectedSection?.subjectId),
+  );
+  const exportTitle = tab === 'section'
+    ? 'BẢNG ĐIỂM LỚP HỌC PHẦN'
+    : tab === 'class'
+      ? 'BẢNG ĐIỂM THEO LỚP'
+      : 'BẢNG ĐIỂM TOÀN KHOA';
+  const exportSubtitle = tab === 'section'
+    ? [selectedSection?.code, selectedSubject?.name].filter(Boolean).join(' - ')
+    : tab === 'class'
+      ? [selectedClass?.code, selectedClass?.name].filter(Boolean).join(' - ')
+      : [selectedFaculty?.code, selectedFaculty?.name].filter(Boolean).join(' - ');
+  const exportMetadata = [{
+    label: 'Học kỳ',
+    value: selectedSemester
+      ? `${selectedSemester.name} - ${selectedSemester.academicYear}`
+      : '',
+  }];
 
   return (
     <div>
@@ -220,6 +252,10 @@ export default function GradebooksPage() {
             sheetName="Bang diem"
             rows={view.rows}
             columns={exportColumns()}
+            title={exportTitle}
+            subtitle={exportSubtitle}
+            metadata={exportMetadata}
+            orientation="Landscape"
           />
         )}
       />

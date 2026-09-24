@@ -12,15 +12,15 @@ import { getExcelValue, normalizeExcelDate } from '../shared/utils/exportExcel.j
 const PAGE_SIZE = 10
 
 const STUDENT_EXCEL_COLUMNS = [
-  { label: 'Mã sinh viên', value: 'code', width: 95 },
-  { label: 'Họ và tên', value: 'fullName', width: 170 },
-  { label: 'Giới tính', value: 'gender', width: 80 },
-  { label: 'Ngày sinh', value: 'birthDate', width: 95 },
-  { label: 'Mã lớp', value: 'classCode', width: 120 },
-  { label: 'Email', value: 'email', width: 190 },
-  { label: 'Số điện thoại', value: 'phone', width: 110 },
-  { label: 'Địa chỉ', value: 'address', width: 150 },
-  { label: 'Trạng thái', value: 'status', width: 100 },
+  { label: 'Mã sinh viên', value: 'code', width: 72 },
+  { label: 'Họ và tên', value: 'fullName', width: 135 },
+  { label: 'Giới tính', value: 'gender', width: 55 },
+  { label: 'Ngày sinh', value: 'birthDate', width: 78 },
+  { label: 'Mã lớp', value: 'classCode', width: 95 },
+  { label: 'Email', value: 'email', width: 150 },
+  { label: 'Số điện thoại', value: 'phone', width: 92 },
+  { label: 'Địa chỉ', value: 'address', width: 110 },
+  { label: 'Trạng thái', value: 'status', width: 80 },
 ]
 
 const STUDENT_EXCEL_HEADERS = {
@@ -477,6 +477,9 @@ export default function StudentsPage() {
               sheetName="Mau nhap sinh vien"
               rows={STUDENT_EXCEL_TEMPLATE}
               columns={STUDENT_EXCEL_COLUMNS}
+              title="MẪU NHẬP SINH VIÊN"
+              variant="template"
+              orientation="Landscape"
             >
               Tải mẫu Excel
             </ExcelExportButton>
@@ -501,6 +504,9 @@ export default function StudentsPage() {
                 status: getStudentStatusLabel(student.status),
               }))}
               columns={STUDENT_EXCEL_COLUMNS}
+              title="DANH SÁCH SINH VIÊN"
+              subtitle="Danh sách sinh viên theo bộ lọc hiện tại"
+              orientation="Landscape"
             />
             <button className="btn btn-primary" onClick={openCreate}>
               + Thêm sinh viên

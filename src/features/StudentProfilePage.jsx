@@ -1,11 +1,13 @@
 import useAuth from '../core/auth/useAuth.js';
 import { getAllData } from '../core/api/apiClient.js';
 import { ErrorState, LoadingState } from '../shared/components/DataState.jsx';
+import Icon from '../shared/components/Icon.jsx';
 import PageHeader from '../shared/components/PageHeader.jsx';
 import StatCard from '../shared/components/StatCard.jsx';
 import StatusBadge from '../shared/components/StatusBadge.jsx';
 import useFetch from '../shared/hooks/useFetch.js';
 import { calculateWeightedAverage, isPassed } from '../shared/utils/trainingRules.js';
+import { createStudentTranscriptModel, downloadStudentTranscript } from '../shared/utils/transcriptExcel.js';
 
 const GENDER_LABELS = { male: 'Nam', female: 'Nữ', other: 'Khác' };
 const STATUS_LABELS = {
@@ -33,12 +35,25 @@ export default function StudentProfilePage() {
   const average = calculateWeightedAverage(scores, data.courseSections, data.subjects);
   const passed = scores.filter((item) => isPassed(item.total)).length;
   const registered = data.registrations.filter((item) => Number(item.studentId) === Number(student?.id) && item.status === 'registered').length;
+  const transcript = createStudentTranscriptModel(data, student?.id);
 
   return (
     <div>
       <PageHeader
         title="Hồ sơ sinh viên"
         description="Thông tin cá nhân và thông tin đào tạo đang được lưu trên hệ thống."
+        actions={(
+          <button
+            className="btn btn-excel btn-sm"
+            type="button"
+            onClick={() => downloadStudentTranscript(data, student?.id)}
+            disabled={!transcript.rows.length}
+            title={transcript.rows.length ? 'Xuất các học phần đã đạt' : 'Chưa có học phần đạt để xuất'}
+          >
+            <Icon name="download" size={15} />
+            <span>{transcript.graduated ? 'Xuất bảng điểm hoàn chỉnh' : 'Xuất bảng điểm'}</span>
+          </button>
+        )}
       />
 
       <div className="stats-grid">
